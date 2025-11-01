@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import StudentDashboard from "./pages/StudentDashboard";
 import CourseDetail from "./pages/CourseDetail";
 import InstructorDashboard from "./pages/InstructorDashboard";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['instructor', 'ta', 'admin']}>
                   <InstructorDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute allowedRoles={['student', 'instructor', 'ta', 'admin']}>
+                  <Profile />
                 </ProtectedRoute>
               } 
             />

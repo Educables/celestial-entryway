@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Check, ArrowRight } from 'lucide-react';
+import { BookOpen, Check, ArrowRight, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Course {
@@ -102,9 +102,15 @@ export default function StudentDashboard() {
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-4xl font-bold">Available Courses</h1>
-          <Button onClick={signOut} variant="outline">
-            Sign Out
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate('/profile')} variant="outline">
+              <User className="h-4 w-4 mr-2" />
+              My Profile
+            </Button>
+            <Button onClick={signOut} variant="outline">
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         <Card>
