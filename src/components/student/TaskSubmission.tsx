@@ -115,12 +115,16 @@ export default function TaskSubmission({ sessionId, studentId }: TaskSubmissionP
     const taskAnswers = answers[task.id] || {};
     const answerArray = [];
 
+    // Allow skipping questions - only add answered questions
     for (let i = 1; i <= task.num_questions; i++) {
-      if (!taskAnswers[i] || taskAnswers[i].length === 0) {
-        toast.error(`Please select at least one option for question ${i}`);
-        return;
+      if (taskAnswers[i] && taskAnswers[i].length > 0) {
+        answerArray.push({ question: i, options: taskAnswers[i] });
       }
-      answerArray.push({ question: i, options: taskAnswers[i] });
+    }
+
+    if (answerArray.length === 0) {
+      toast.error('Please answer at least one question');
+      return;
     }
 
     setSubmitting(task.id);
@@ -211,7 +215,9 @@ export default function TaskSubmission({ sessionId, studentId }: TaskSubmissionP
                 
                 return (
                   <div key={q.question_number} className="space-y-2">
-                    <Label className="text-base">Question {q.question_number}</Label>
+                    <Label className="text-base">
+                      Question {q.question_number} <span className="text-sm text-muted-foreground">(optional)</span>
+                    </Label>
                     <div className="flex flex-wrap gap-4">
                       {q.options.map((option) => (
                         <div key={option} className="flex items-center space-x-2">

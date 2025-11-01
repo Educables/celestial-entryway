@@ -84,14 +84,28 @@ export default function TaskSubmissionsDialog({
       );
 
       // Combine submissions with student info
-      const formattedSubmissions = submissionsData.map(sub => ({
-        id: sub.id,
-        student_id: sub.student_id,
-        answers: sub.answers as Record<number, string[]>,
-        submitted_at: sub.submitted_at,
-        student_name: profilesMap.get(sub.student_id)?.name || 'Unknown',
-        student_email: profilesMap.get(sub.student_id)?.email || '',
-      }));
+      const formattedSubmissions = submissionsData.map(sub => {
+        // Convert answer format from array to object for easier lookup
+        const answersObject: Record<number, string[]> = {};
+        const answerArray = sub.answers as any;
+        
+        if (Array.isArray(answerArray)) {
+          answerArray.forEach((item: any) => {
+            if (item.question && item.options) {
+              answersObject[item.question] = item.options;
+            }
+          });
+        }
+        
+        return {
+          id: sub.id,
+          student_id: sub.student_id,
+          answers: answersObject,
+          submitted_at: sub.submitted_at,
+          student_name: profilesMap.get(sub.student_id)?.name || 'Unknown',
+          student_email: profilesMap.get(sub.student_id)?.email || '',
+        };
+      });
 
       setSubmissions(formattedSubmissions);
     } catch (error: any) {
@@ -144,18 +158,27 @@ export default function TaskSubmissionsDialog({
                     {questions.map((question) => {
                       const rawAnswers = submission.answers[question.question_number];
                       const studentAnswers = Array.isArray(rawAnswers) ? rawAnswers : [];
+                      
+                      if (studentAnswers.length === 0) {
+                        return (
+                          <div key={question.question_number} className="border-l-2 border-muted pl-3">
+                            <p className="font-medium text-sm mb-1">
+                              Question {question.question_number}
+                            </p>
+                            <p className="text-sm text-muted-foreground italic">Skipped</p>
+                          </div>
+                        );
+                      }
+                      
                       return (
                         <div key={question.question_number} className="border-l-2 border-primary/20 pl-3">
                           <p className="font-medium text-sm mb-1">
                             Question {question.question_number}
                           </p>
                           <div className="flex flex-wrap gap-2">
-                            {question.options.map((option) => (
-                              <Badge
-                                key={option}
-                                variant={studentAnswers.includes(option) ? "default" : "outline"}
-                              >
-                                {option}
+                            {studentAnswers.map((answer) => (
+                              <Badge key={answer} variant="default">
+                                {answer}
                               </Badge>
                             ))}
                           </div>
