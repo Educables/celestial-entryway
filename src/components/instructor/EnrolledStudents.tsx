@@ -149,7 +149,7 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -160,11 +160,11 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
           <div className="flex gap-2">
             <Button onClick={exportToExcel} variant="outline" size="sm">
               <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Export Excel
+              Excel
             </Button>
             <Button onClick={exportToPDF} variant="outline" size="sm">
               <FileText className="h-4 w-4 mr-2" />
-              Export PDF
+              PDF
             </Button>
           </div>
         </div>
