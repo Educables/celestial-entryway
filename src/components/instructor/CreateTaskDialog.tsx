@@ -20,7 +20,7 @@ export default function CreateTaskDialog({ sessionId, courseMaterials, onTaskCre
   const [description, setDescription] = useState('');
   const [materialReference, setMaterialReference] = useState('');
   const [numQuestions, setNumQuestions] = useState(5);
-  const [optionsInput, setOptionsInput] = useState('A,B,C,D');
+  const [questionOptions, setQuestionOptions] = useState<Record<number, string>>({});
   const [dueDate, setDueDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,10 +37,21 @@ export default function CreateTaskDialog({ sessionId, courseMaterials, onTaskCre
       return;
     }
 
-    const options = optionsInput.split(',').map(opt => opt.trim()).filter(opt => opt);
-    if (options.length < 2) {
-      toast.error('Please provide at least 2 options');
-      return;
+    // Validate all questions have options
+    const questions = [];
+    for (let i = 1; i <= numQuestions; i++) {
+      const optionsStr = questionOptions[i] || '';
+      const options = optionsStr.split(',').map(opt => opt.trim()).filter(opt => opt);
+      
+      if (options.length < 1) {
+        toast.error(`Please provide at least 1 option for question ${i}`);
+        return;
+      }
+      
+      questions.push({
+        question_number: i,
+        options
+      });
     }
 
     setIsSubmitting(true);
@@ -54,7 +65,7 @@ export default function CreateTaskDialog({ sessionId, courseMaterials, onTaskCre
           description: description.trim() || null,
           material_reference: materialReference || null,
           num_questions: numQuestions,
-          options,
+          questions,
           due_date: dueDate ? new Date(dueDate).toISOString() : null,
         });
 
@@ -66,7 +77,7 @@ export default function CreateTaskDialog({ sessionId, courseMaterials, onTaskCre
       setDescription('');
       setMaterialReference('');
       setNumQuestions(5);
-      setOptionsInput('A,B,C,D');
+      setQuestionOptions({});
       setDueDate('');
       onTaskCreated();
     } catch (error: any) {
@@ -143,17 +154,26 @@ export default function CreateTaskDialog({ sessionId, courseMaterials, onTaskCre
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="options">Answer Options (comma-separated)</Label>
-            <Input
-              id="options"
-              value={optionsInput}
-              onChange={(e) => setOptionsInput(e.target.value)}
-              placeholder="A,B,C,D"
-              required
-            />
+          <div className="space-y-3">
+            <Label>Options for Each Question (comma-separated)</Label>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {Array.from({ length: numQuestions }, (_, i) => i + 1).map((qNum) => (
+                <div key={qNum} className="space-y-1">
+                  <Label htmlFor={`q${qNum}-options`} className="text-sm font-normal">
+                    Question {qNum} options:
+                  </Label>
+                  <Input
+                    id={`q${qNum}-options`}
+                    value={questionOptions[qNum] || ''}
+                    onChange={(e) => setQuestionOptions(prev => ({ ...prev, [qNum]: e.target.value }))}
+                    placeholder="A,B,C,D"
+                    required
+                  />
+                </div>
+              ))}
+            </div>
             <p className="text-xs text-muted-foreground">
-              Students will select one of these options for each question
+              Students can select multiple options per question
             </p>
           </div>
 

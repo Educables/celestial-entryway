@@ -224,7 +224,7 @@ export type Database = {
           id: string
           material_reference: string | null
           num_questions: number
-          options: string[]
+          questions: Json
           session_id: string
           title: string
         }
@@ -235,7 +235,7 @@ export type Database = {
           id?: string
           material_reference?: string | null
           num_questions: number
-          options?: string[]
+          questions?: Json
           session_id: string
           title: string
         }
@@ -246,7 +246,7 @@ export type Database = {
           id?: string
           material_reference?: string | null
           num_questions?: number
-          options?: string[]
+          questions?: Json
           session_id?: string
           title?: string
         }

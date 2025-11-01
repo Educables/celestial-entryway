@@ -12,7 +12,7 @@ interface Task {
   description: string | null;
   material_reference: string | null;
   num_questions: number;
-  options: string[];
+  questions: { question_number: number; options: string[] }[];
   due_date: string | null;
   created_at: string;
   submission_count?: number;
@@ -49,7 +49,11 @@ export default function SessionTasks({ sessionId, onRefresh }: SessionTasksProps
             .select('*', { count: 'exact', head: true })
             .eq('task_id', task.id);
 
-          return { ...task, submission_count: count || 0 };
+          return { 
+            ...task, 
+            questions: task.questions as { question_number: number; options: string[] }[],
+            submission_count: count || 0 
+          };
         })
       );
 
@@ -127,7 +131,9 @@ export default function SessionTasks({ sessionId, onRefresh }: SessionTasksProps
               <span className="font-medium">Questions:</span> {task.num_questions}
             </div>
             <div>
-              <span className="font-medium">Options:</span> {task.options.join(', ')}
+              <span className="font-medium">Options per question:</span> {
+                task.questions.map(q => `Q${q.question_number}: ${q.options.join(',')}`).join(' | ')
+              }
             </div>
             {task.due_date && (
               <div>

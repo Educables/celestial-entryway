@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { CheckCircle2, Clock } from 'lucide-react';
 
@@ -14,14 +14,14 @@ interface Task {
   description: string | null;
   material_reference: string | null;
   num_questions: number;
-  options: string[];
+  questions: { question_number: number; options: string[] }[];
   due_date: string | null;
   created_at: string;
 }
 
 interface Submission {
   id: string;
-  answers: { question: number; option: string }[];
+  answers: { question: number; options: string[] }[];
   submitted_at: string;
 }
 
@@ -33,7 +33,7 @@ interface TaskSubmissionProps {
 export default function TaskSubmission({ sessionId, studentId }: TaskSubmissionProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [submissions, setSubmissions] = useState<Record<string, Submission>>({});
-  const [answers, setAnswers] = useState<Record<string, Record<number, string>>>({});
+  const [answers, setAnswers] = useState<Record<string, Record<number, string[]>>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<string | null>(null);
 
@@ -63,20 +63,23 @@ export default function TaskSubmission({ sessionId, studentId }: TaskSubmissionP
       (submissionsData || []).forEach(sub => {
         submissionsMap[sub.task_id] = {
           id: sub.id,
-          answers: sub.answers as { question: number; option: string }[],
+          answers: sub.answers as { question: number; options: string[] }[],
           submitted_at: sub.submitted_at
         };
       });
 
-      setTasks(tasksData || []);
+      setTasks((tasksData || []).map(task => ({
+        ...task,
+        questions: task.questions as { question_number: number; options: string[] }[]
+      })));
       setSubmissions(submissionsMap);
 
       // Initialize answers from existing submissions
-      const initialAnswers: Record<string, Record<number, string>> = {};
+      const initialAnswers: Record<string, Record<number, string[]>> = {};
       (submissionsData || []).forEach(sub => {
-        const answerMap: Record<number, string> = {};
+        const answerMap: Record<number, string[]> = {};
         (sub.answers as any[]).forEach((ans: any) => {
-          answerMap[ans.question] = ans.option;
+          answerMap[ans.question] = ans.options || [];
         });
         initialAnswers[sub.task_id] = answerMap;
       });
@@ -89,14 +92,23 @@ export default function TaskSubmission({ sessionId, studentId }: TaskSubmissionP
     }
   };
 
-  const handleAnswerChange = (taskId: string, questionNum: number, option: string) => {
-    setAnswers(prev => ({
-      ...prev,
-      [taskId]: {
-        ...(prev[taskId] || {}),
-        [questionNum]: option
-      }
-    }));
+  const handleAnswerChange = (taskId: string, questionNum: number, option: string, checked: boolean) => {
+    setAnswers(prev => {
+      const taskAnswers = prev[taskId] || {};
+      const currentOptions = taskAnswers[questionNum] || [];
+      
+      const newOptions = checked
+        ? [...currentOptions, option]
+        : currentOptions.filter(opt => opt !== option);
+      
+      return {
+        ...prev,
+        [taskId]: {
+          ...taskAnswers,
+          [questionNum]: newOptions
+        }
+      };
+    });
   };
 
   const handleSubmit = async (task: Task) => {
@@ -104,11 +116,11 @@ export default function TaskSubmission({ sessionId, studentId }: TaskSubmissionP
     const answerArray = [];
 
     for (let i = 1; i <= task.num_questions; i++) {
-      if (!taskAnswers[i]) {
-        toast.error(`Please answer question ${i}`);
+      if (!taskAnswers[i] || taskAnswers[i].length === 0) {
+        toast.error(`Please select at least one option for question ${i}`);
         return;
       }
-      answerArray.push({ question: i, option: taskAnswers[i] });
+      answerArray.push({ question: i, options: taskAnswers[i] });
     }
 
     setSubmitting(task.id);
@@ -194,26 +206,31 @@ export default function TaskSubmission({ sessionId, studentId }: TaskSubmissionP
               )}
             </CardHeader>
             <CardContent className="space-y-4">
-              {Array.from({ length: task.num_questions }, (_, i) => i + 1).map((questionNum) => (
-                <div key={questionNum} className="space-y-2">
-                  <Label className="text-base">Question {questionNum}</Label>
-                  <RadioGroup
-                    value={taskAnswers[questionNum] || ''}
-                    onValueChange={(value) => handleAnswerChange(task.id, questionNum, value)}
-                  >
-                    <div className="flex gap-4">
-                      {task.options.map((option) => (
+              {task.questions.map((q) => {
+                const selectedOptions = taskAnswers[q.question_number] || [];
+                
+                return (
+                  <div key={q.question_number} className="space-y-2">
+                    <Label className="text-base">Question {q.question_number}</Label>
+                    <div className="flex flex-wrap gap-4">
+                      {q.options.map((option) => (
                         <div key={option} className="flex items-center space-x-2">
-                          <RadioGroupItem value={option} id={`${task.id}-q${questionNum}-${option}`} />
-                          <Label htmlFor={`${task.id}-q${questionNum}-${option}`} className="font-normal">
+                          <Checkbox
+                            id={`${task.id}-q${q.question_number}-${option}`}
+                            checked={selectedOptions.includes(option)}
+                            onCheckedChange={(checked) => 
+                              handleAnswerChange(task.id, q.question_number, option, checked as boolean)
+                            }
+                          />
+                          <Label htmlFor={`${task.id}-q${q.question_number}-${option}`} className="font-normal">
                             {option}
                           </Label>
                         </div>
                       ))}
                     </div>
-                  </RadioGroup>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
 
               {isSubmitted && (
                 <div className="text-sm text-muted-foreground pt-2">
