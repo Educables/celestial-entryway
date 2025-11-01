@@ -142,7 +142,8 @@ export default function TaskSubmissionsDialog({
                 <CardContent>
                   <div className="space-y-3">
                     {questions.map((question) => {
-                      const studentAnswers = submission.answers[question.question_number] || [];
+                      const rawAnswers = submission.answers[question.question_number];
+                      const studentAnswers = Array.isArray(rawAnswers) ? rawAnswers : [];
                       return (
                         <div key={question.question_number} className="border-l-2 border-primary/20 pl-3">
                           <p className="font-medium text-sm mb-1">
