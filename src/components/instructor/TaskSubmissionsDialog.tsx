@@ -53,30 +53,44 @@ export default function TaskSubmissionsDialog({
   const fetchSubmissions = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // First get all submissions
+      const { data: submissionsData, error: submissionsError } = await supabase
         .from('task_submissions')
-        .select(`
-          id,
-          student_id,
-          answers,
-          submitted_at,
-          profiles!task_submissions_student_id_fkey (
-            name,
-            email
-          )
-        `)
+        .select('id, student_id, answers, submitted_at')
         .eq('task_id', taskId)
         .order('submitted_at', { ascending: false });
 
-      if (error) throw error;
+      if (submissionsError) throw submissionsError;
 
-      const formattedSubmissions = (data || []).map((sub: any) => ({
+      if (!submissionsData || submissionsData.length === 0) {
+        setSubmissions([]);
+        return;
+      }
+
+      // Get unique student IDs
+      const studentIds = [...new Set(submissionsData.map(s => s.student_id))];
+
+      // Fetch student profiles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', studentIds);
+
+      if (profilesError) throw profilesError;
+
+      // Create a map of student profiles
+      const profilesMap = new Map(
+        (profilesData || []).map(p => [p.id, p])
+      );
+
+      // Combine submissions with student info
+      const formattedSubmissions = submissionsData.map(sub => ({
         id: sub.id,
         student_id: sub.student_id,
         answers: sub.answers as Record<number, string[]>,
         submitted_at: sub.submitted_at,
-        student_name: sub.profiles?.name || 'Unknown',
-        student_email: sub.profiles?.email || '',
+        student_name: profilesMap.get(sub.student_id)?.name || 'Unknown',
+        student_email: profilesMap.get(sub.student_id)?.email || '',
       }));
 
       setSubmissions(formattedSubmissions);
