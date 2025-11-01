@@ -14,7 +14,7 @@ interface Task {
   description: string | null;
   material_reference: string | null;
   num_questions: number;
-  questions: { question_number: number; options: string[] }[];
+  questions: { question_number: number; options: { text: string; points: number }[] }[];
   due_date: string | null;
   created_at: string;
 }
@@ -70,7 +70,7 @@ export default function TaskSubmission({ sessionId, studentId }: TaskSubmissionP
 
       setTasks((tasksData || []).map(task => ({
         ...task,
-        questions: task.questions as { question_number: number; options: string[] }[]
+        questions: task.questions as { question_number: number; options: { text: string; points: number }[] }[]
       })));
       setSubmissions(submissionsMap);
 
@@ -114,11 +114,23 @@ export default function TaskSubmission({ sessionId, studentId }: TaskSubmissionP
   const handleSubmit = async (task: Task) => {
     const taskAnswers = answers[task.id] || {};
     const answerArray = [];
+    let totalGrade = 0;
 
-    // Allow skipping questions - only add answered questions
+    // Allow skipping questions - only add answered questions and calculate grade
     for (let i = 1; i <= task.num_questions; i++) {
       if (taskAnswers[i] && taskAnswers[i].length > 0) {
         answerArray.push({ question: i, options: taskAnswers[i] });
+        
+        // Calculate points for this question
+        const question = task.questions.find(q => q.question_number === i);
+        if (question) {
+          taskAnswers[i].forEach(selectedOption => {
+            const option = question.options.find(opt => opt.text === selectedOption);
+            if (option) {
+              totalGrade += option.points;
+            }
+          });
+        }
       }
     }
 
@@ -136,11 +148,15 @@ export default function TaskSubmission({ sessionId, studentId }: TaskSubmissionP
         // Update existing submission
         const { error } = await supabase
           .from('task_submissions')
-          .update({ answers: answerArray, submitted_at: new Date().toISOString() })
+          .update({ 
+            answers: answerArray, 
+            grade: totalGrade,
+            submitted_at: new Date().toISOString() 
+          })
           .eq('id', existingSubmission.id);
 
         if (error) throw error;
-        toast.success('Task updated successfully');
+        toast.success(`Task updated successfully! Grade: ${totalGrade} points`);
       } else {
         // Create new submission
         const { error } = await supabase
@@ -148,11 +164,12 @@ export default function TaskSubmission({ sessionId, studentId }: TaskSubmissionP
           .insert({
             task_id: task.id,
             student_id: studentId,
-            answers: answerArray
+            answers: answerArray,
+            grade: totalGrade
           });
 
         if (error) throw error;
-        toast.success('Task submitted successfully');
+        toast.success(`Task submitted successfully! Grade: ${totalGrade} points`);
       }
 
       fetchTasksAndSubmissions();
@@ -220,16 +237,16 @@ export default function TaskSubmission({ sessionId, studentId }: TaskSubmissionP
                     </Label>
                     <div className="flex flex-wrap gap-4">
                       {q.options.map((option) => (
-                        <div key={option} className="flex items-center space-x-2">
+                        <div key={option.text} className="flex items-center space-x-2">
                           <Checkbox
-                            id={`${task.id}-q${q.question_number}-${option}`}
-                            checked={selectedOptions.includes(option)}
+                            id={`${task.id}-q${q.question_number}-${option.text}`}
+                            checked={selectedOptions.includes(option.text)}
                             onCheckedChange={(checked) => 
-                              handleAnswerChange(task.id, q.question_number, option, checked as boolean)
+                              handleAnswerChange(task.id, q.question_number, option.text, checked as boolean)
                             }
                           />
-                          <Label htmlFor={`${task.id}-q${q.question_number}-${option}`} className="font-normal">
-                            {option}
+                          <Label htmlFor={`${task.id}-q${q.question_number}-${option.text}`} className="font-normal">
+                            {option.text} <span className="text-xs text-muted-foreground">({option.points} pts)</span>
                           </Label>
                         </div>
                       ))}

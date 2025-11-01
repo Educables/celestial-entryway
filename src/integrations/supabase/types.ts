@@ -187,6 +187,7 @@ export type Database = {
       task_submissions: {
         Row: {
           answers: Json
+          grade: number | null
           id: string
           student_id: string
           submitted_at: string
@@ -194,6 +195,7 @@ export type Database = {
         }
         Insert: {
           answers: Json
+          grade?: number | null
           id?: string
           student_id: string
           submitted_at?: string
@@ -201,6 +203,7 @@ export type Database = {
         }
         Update: {
           answers?: Json
+          grade?: number | null
           id?: string
           student_id?: string
           submitted_at?: string

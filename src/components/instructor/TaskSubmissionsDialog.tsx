@@ -22,11 +22,12 @@ interface Submission {
   submitted_at: string;
   student_name: string;
   student_email: string;
+  grade: number;
 }
 
 interface Question {
   question_number: number;
-  options: string[];
+  options: { text: string; points: number }[];
 }
 
 interface TaskSubmissionsDialogProps {
@@ -56,7 +57,7 @@ export default function TaskSubmissionsDialog({
       // First get all submissions
       const { data: submissionsData, error: submissionsError } = await supabase
         .from('task_submissions')
-        .select('id, student_id, answers, submitted_at')
+        .select('id, student_id, answers, submitted_at, grade')
         .eq('task_id', taskId)
         .order('submitted_at', { ascending: false });
 
@@ -104,6 +105,7 @@ export default function TaskSubmissionsDialog({
           submitted_at: sub.submitted_at,
           student_name: profilesMap.get(sub.student_id)?.name || 'Unknown',
           student_email: profilesMap.get(sub.student_id)?.email || '',
+          grade: sub.grade || 0,
         };
       });
 
@@ -144,13 +146,18 @@ export default function TaskSubmissionsDialog({
               <Card key={submission.id}>
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
-                    <div>
+                    <div className="flex-1">
                       <CardTitle className="text-lg">{submission.student_name}</CardTitle>
                       <p className="text-sm text-muted-foreground">{submission.student_email}</p>
                     </div>
-                    <Badge variant="outline">
-                      {format(new Date(submission.submitted_at), 'MMM d, yyyy h:mm a')}
-                    </Badge>
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge variant="secondary" className="text-lg font-semibold">
+                        Grade: {submission.grade} pts
+                      </Badge>
+                      <Badge variant="outline">
+                        {format(new Date(submission.submitted_at), 'MMM d, yyyy h:mm a')}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -165,22 +172,34 @@ export default function TaskSubmissionsDialog({
                             <p className="font-medium text-sm mb-1">
                               Question {question.question_number}
                             </p>
-                            <p className="text-sm text-muted-foreground italic">Skipped</p>
+                            <p className="text-sm text-muted-foreground italic">Skipped (0 pts)</p>
                           </div>
                         );
                       }
+
+                      // Calculate points for this question
+                      let questionPoints = 0;
+                      studentAnswers.forEach(answer => {
+                        const option = question.options.find(opt => opt.text === answer);
+                        if (option) {
+                          questionPoints += option.points;
+                        }
+                      });
                       
                       return (
                         <div key={question.question_number} className="border-l-2 border-primary/20 pl-3">
                           <p className="font-medium text-sm mb-1">
-                            Question {question.question_number}
+                            Question {question.question_number} <span className="text-muted-foreground">({questionPoints} pts)</span>
                           </p>
                           <div className="flex flex-wrap gap-2">
-                            {studentAnswers.map((answer) => (
-                              <Badge key={answer} variant="default">
-                                {answer}
-                              </Badge>
-                            ))}
+                            {studentAnswers.map((answer) => {
+                              const option = question.options.find(opt => opt.text === answer);
+                              return (
+                                <Badge key={answer} variant="default">
+                                  {answer} ({option?.points || 0} pts)
+                                </Badge>
+                              );
+                            })}
                           </div>
                         </div>
                       );

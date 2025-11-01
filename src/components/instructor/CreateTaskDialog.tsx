@@ -20,7 +20,7 @@ export default function CreateTaskDialog({ sessionId, courseMaterials, onTaskCre
   const [description, setDescription] = useState('');
   const [materialReference, setMaterialReference] = useState('');
   const [numQuestions, setNumQuestions] = useState(5);
-  const [questionOptions, setQuestionOptions] = useState<Record<number, string>>({});
+  const [questionOptions, setQuestionOptions] = useState<Record<number, { text: string; points: number }[]>>({});
   const [dueDate, setDueDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -40,12 +40,23 @@ export default function CreateTaskDialog({ sessionId, courseMaterials, onTaskCre
     // Validate all questions have options
     const questions = [];
     for (let i = 1; i <= numQuestions; i++) {
-      const optionsStr = questionOptions[i] || '';
-      const options = optionsStr.split(',').map(opt => opt.trim()).filter(opt => opt);
+      const options = questionOptions[i] || [];
       
       if (options.length < 1) {
         toast.error(`Please provide at least 1 option for question ${i}`);
         return;
+      }
+
+      // Validate all options have points
+      for (const opt of options) {
+        if (!opt.text.trim()) {
+          toast.error(`Please provide text for all options in question ${i}`);
+          return;
+        }
+        if (opt.points < 0) {
+          toast.error(`Points must be non-negative for question ${i}`);
+          return;
+        }
       }
       
       questions.push({
@@ -155,25 +166,67 @@ export default function CreateTaskDialog({ sessionId, courseMaterials, onTaskCre
           </div>
 
           <div className="space-y-3">
-            <Label>Options for Each Question (comma-separated)</Label>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {Array.from({ length: numQuestions }, (_, i) => i + 1).map((qNum) => (
-                <div key={qNum} className="space-y-1">
-                  <Label htmlFor={`q${qNum}-options`} className="text-sm font-normal">
-                    Question {qNum} options:
-                  </Label>
-                  <Input
-                    id={`q${qNum}-options`}
-                    value={questionOptions[qNum] || ''}
-                    onChange={(e) => setQuestionOptions(prev => ({ ...prev, [qNum]: e.target.value }))}
-                    placeholder="A,B,C,D"
-                    required
-                  />
-                </div>
-              ))}
+            <Label>Options and Points for Each Question</Label>
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {Array.from({ length: numQuestions }, (_, i) => i + 1).map((qNum) => {
+                const options = questionOptions[qNum] || [];
+                return (
+                  <div key={qNum} className="space-y-2 border rounded-lg p-3">
+                    <Label className="text-sm font-medium">Question {qNum}</Label>
+                    {options.map((opt, idx) => (
+                      <div key={idx} className="flex gap-2 items-center">
+                        <Input
+                          value={opt.text}
+                          onChange={(e) => {
+                            const newOptions = [...options];
+                            newOptions[idx] = { ...opt, text: e.target.value };
+                            setQuestionOptions(prev => ({ ...prev, [qNum]: newOptions }));
+                          }}
+                          placeholder="Option text (e.g., A)"
+                          className="flex-1"
+                        />
+                        <Input
+                          type="number"
+                          min="0"
+                          value={opt.points}
+                          onChange={(e) => {
+                            const newOptions = [...options];
+                            newOptions[idx] = { ...opt, points: parseFloat(e.target.value) || 0 };
+                            setQuestionOptions(prev => ({ ...prev, [qNum]: newOptions }));
+                          }}
+                          placeholder="Points"
+                          className="w-24"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const newOptions = options.filter((_, i) => i !== idx);
+                            setQuestionOptions(prev => ({ ...prev, [qNum]: newOptions }));
+                          }}
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newOptions = [...options, { text: '', points: 0 }];
+                        setQuestionOptions(prev => ({ ...prev, [qNum]: newOptions }));
+                      }}
+                    >
+                      + Add Option
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
             <p className="text-xs text-muted-foreground">
-              Students can select multiple options per question
+              Students can select multiple options per question. Total score will be calculated automatically.
             </p>
           </div>
 
