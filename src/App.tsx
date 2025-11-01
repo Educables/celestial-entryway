@@ -33,7 +33,7 @@ const App = () => (
               } 
             />
             <Route 
-              path="/student/course/:courseId" 
+              path="/course/:courseId" 
               element={
                 <ProtectedRoute allowedRoles={['student']}>
                   <CourseDetail />

@@ -149,7 +149,7 @@ export default function StudentDashboard() {
                     {isEnrolled ? (
                       <>
                         <Button
-                          onClick={() => navigate(`/student/course/${course.id}`)}
+                          onClick={() => navigate(`/course/${course.id}`)}
                           className="flex-1"
                         >
                           View Sessions
