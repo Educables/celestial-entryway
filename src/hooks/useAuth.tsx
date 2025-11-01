@@ -64,10 +64,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
-      setRole(data.role as UserRole);
+      
+      if (data) {
+        setRole(data.role as UserRole);
+      } else {
+        setRole('student'); // Default to student if no role found
+      }
     } catch (error) {
       console.error('Error fetching user role:', error);
       setRole('student'); // Default to student if role fetch fails
