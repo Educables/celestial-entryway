@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { RequestValidationDialog } from '@/components/ta/RequestValidationDialog';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Submission {
   id: string;
@@ -42,6 +43,7 @@ export default function TaskSubmissionsDialog({
   taskTitle,
   questions,
 }: TaskSubmissionsDialogProps) {
+  const { role } = useAuth();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
