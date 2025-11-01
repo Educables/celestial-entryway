@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Shield } from 'lucide-react';
+import { ArrowLeft, Shield, User, LogOut } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type UserRole = 'student' | 'ta' | 'instructor' | 'admin';
@@ -20,7 +20,7 @@ interface UserWithRole {
 }
 
 export default function AdminDashboard() {
-  const { user, role, loading: authLoading } = useAuth();
+  const { user, role, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserWithRole[]>([]);
@@ -147,6 +147,16 @@ export default function AdminDashboard() {
               <Shield className="h-6 w-6 text-primary" />
               <h1 className="text-3xl font-bold">Admin Dashboard</h1>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate('/profile')}>
+              <User className="h-4 w-4 mr-2" />
+              Profile
+            </Button>
+            <Button variant="outline" size="sm" onClick={signOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
           </div>
         </div>
 
