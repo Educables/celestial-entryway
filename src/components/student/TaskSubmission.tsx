@@ -14,7 +14,7 @@ interface Task {
   description: string | null;
   material_reference: string | null;
   num_questions: number;
-  questions: { question_number: number; options: { text: string; points: number }[] }[];
+  questions: { question_number: number; options: string[] }[];
   due_date: string | null;
   created_at: string;
 }
@@ -70,7 +70,7 @@ export default function TaskSubmission({ sessionId, studentId }: TaskSubmissionP
 
       setTasks((tasksData || []).map(task => ({
         ...task,
-        questions: task.questions as { question_number: number; options: { text: string; points: number }[] }[]
+        questions: task.questions as { question_number: number; options: string[] }[]
       })));
       setSubmissions(submissionsMap);
 
@@ -220,16 +220,16 @@ export default function TaskSubmission({ sessionId, studentId }: TaskSubmissionP
                     </Label>
                     <div className="flex flex-wrap gap-4">
                       {q.options.map((option) => (
-                        <div key={option.text} className="flex items-center space-x-2">
+                        <div key={option} className="flex items-center space-x-2">
                           <Checkbox
-                            id={`${task.id}-q${q.question_number}-${option.text}`}
-                            checked={selectedOptions.includes(option.text)}
+                            id={`${task.id}-q${q.question_number}-${option}`}
+                            checked={selectedOptions.includes(option)}
                             onCheckedChange={(checked) => 
-                              handleAnswerChange(task.id, q.question_number, option.text, checked as boolean)
+                              handleAnswerChange(task.id, q.question_number, option, checked as boolean)
                             }
                           />
-                          <Label htmlFor={`${task.id}-q${q.question_number}-${option.text}`} className="font-normal">
-                            {option.text} ({option.points} pts)
+                          <Label htmlFor={`${task.id}-q${q.question_number}-${option}`} className="font-normal">
+                            {option}
                           </Label>
                         </div>
                       ))}

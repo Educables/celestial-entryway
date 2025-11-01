@@ -26,7 +26,7 @@ interface Submission {
 
 interface Question {
   question_number: number;
-  options: { text: string; points: number }[];
+  options: string[];
 }
 
 interface TaskSubmissionsDialogProps {
@@ -147,23 +147,6 @@ export default function TaskSubmissionsDialog({
                     <div>
                       <CardTitle className="text-lg">{submission.student_name}</CardTitle>
                       <p className="text-sm text-muted-foreground">{submission.student_email}</p>
-                      <p className="text-sm font-medium mt-1">
-                        Total Score: {(() => {
-                          let total = 0;
-                          let maxTotal = 0;
-                          questions.forEach(q => {
-                            const studentAnswers = Array.isArray(submission.answers[q.question_number]) 
-                              ? submission.answers[q.question_number] 
-                              : [];
-                            studentAnswers.forEach(answer => {
-                              const option = q.options.find(o => o.text === answer);
-                              total += option?.points || 0;
-                            });
-                            maxTotal += Math.max(...q.options.map(o => o.points));
-                          });
-                          return `${total}/${maxTotal} pts`;
-                        })()}
-                      </p>
                     </div>
                     <Badge variant="outline">
                       {format(new Date(submission.submitted_at), 'MMM d, yyyy h:mm a')}
@@ -176,19 +159,11 @@ export default function TaskSubmissionsDialog({
                       const rawAnswers = submission.answers[question.question_number];
                       const studentAnswers = Array.isArray(rawAnswers) ? rawAnswers : [];
                       
-                      // Calculate points for this question
-                      const earnedPoints = studentAnswers.reduce((sum, answer) => {
-                        const option = question.options.find(o => o.text === answer);
-                        return sum + (option?.points || 0);
-                      }, 0);
-                      
-                      const maxPoints = Math.max(...question.options.map(o => o.points));
-                      
                       if (studentAnswers.length === 0) {
                         return (
                           <div key={question.question_number} className="border-l-2 border-muted pl-3">
                             <p className="font-medium text-sm mb-1">
-                              Question {question.question_number} <span className="text-muted-foreground">(0/{maxPoints} pts)</span>
+                              Question {question.question_number}
                             </p>
                             <p className="text-sm text-muted-foreground italic">Skipped</p>
                           </div>
@@ -198,17 +173,14 @@ export default function TaskSubmissionsDialog({
                       return (
                         <div key={question.question_number} className="border-l-2 border-primary/20 pl-3">
                           <p className="font-medium text-sm mb-1">
-                            Question {question.question_number} <span className="text-muted-foreground">({earnedPoints}/{maxPoints} pts)</span>
+                            Question {question.question_number}
                           </p>
                           <div className="flex flex-wrap gap-2">
-                            {studentAnswers.map((answer) => {
-                              const option = question.options.find(o => o.text === answer);
-                              return (
-                                <Badge key={answer} variant="default">
-                                  {answer} ({option?.points || 0} pts)
-                                </Badge>
-                              );
-                            })}
+                            {studentAnswers.map((answer) => (
+                              <Badge key={answer} variant="default">
+                                {answer}
+                              </Badge>
+                            ))}
                           </div>
                         </div>
                       );
