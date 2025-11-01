@@ -218,7 +218,7 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle>User Role Management</CardTitle>
             <CardDescription>
-              Assign Teacher and TA roles to students for specific courses. Admin roles are limited to 4 accounts with emails starting with "admin".
+              Assign Teacher and TA roles to students for specific courses. Admin roles are limited to 4 accounts with emails starting with "boss".
             </CardDescription>
           </CardHeader>
           <CardContent>
