@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileText, Calendar, Clock } from 'lucide-react';
 import { format } from 'date-fns';
+import TaskSubmissionsDialog from '@/components/instructor/TaskSubmissionsDialog';
 
 interface Task {
   id: string;
@@ -14,6 +15,8 @@ interface Task {
   num_questions: number;
   session_id: string;
   session_name: string;
+  questions: { question_number: number; options: { text: string; points: number }[] }[];
+  submissionCount: number;
 }
 
 interface CourseTasksViewProps {
@@ -50,15 +53,37 @@ export function CourseTasksView({ courseId }: CourseTasksViewProps) {
 
         if (tasksError) throw tasksError;
 
-        const tasksWithSession = tasksData?.map(task => {
-          const session = sessionsData.find(s => s.id === task.session_id);
-          return {
-            ...task,
-            session_name: session?.name || 'Unknown Session'
-          };
-        }) || [];
+        // Fetch submission counts for each task
+        const tasksWithDetails = await Promise.all(
+          (tasksData || []).map(async (task) => {
+            const session = sessionsData.find(s => s.id === task.session_id);
+            
+            // Get submission count
+            const { count } = await supabase
+              .from('task_submissions')
+              .select('*', { count: 'exact', head: true })
+              .eq('task_id', task.id);
 
-        setTasks(tasksWithSession);
+            // Parse questions from jsonb
+            const questions = Array.isArray(task.questions) 
+              ? task.questions as { question_number: number; options: { text: string; points: number }[] }[]
+              : [];
+
+            return {
+              id: task.id,
+              title: task.title,
+              description: task.description,
+              due_date: task.due_date,
+              num_questions: task.num_questions,
+              session_id: task.session_id,
+              session_name: session?.name || 'Unknown Session',
+              questions,
+              submissionCount: count || 0,
+            };
+          })
+        );
+
+        setTasks(tasksWithDetails);
       }
     } catch (error) {
       console.error('Error fetching tasks:', error);
@@ -99,21 +124,29 @@ export function CourseTasksView({ courseId }: CourseTasksViewProps) {
           <Card key={task.id}>
             <CardHeader>
               <div className="flex items-start justify-between">
-                <div className="space-y-1">
+                <div className="space-y-1 flex-1">
                   <CardTitle className="text-lg">{task.title}</CardTitle>
                   <CardDescription>
                     <Badge variant="outline" className="mr-2">
                       {task.session_name}
                     </Badge>
                     <span className="text-sm">{task.num_questions} question{task.num_questions !== 1 ? 's' : ''}</span>
+                    <span className="text-sm ml-2">• {task.submissionCount} submission{task.submissionCount !== 1 ? 's' : ''}</span>
                   </CardDescription>
                 </div>
-                {task.due_date && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>Due: {format(new Date(task.due_date), 'MMM d, yyyy')}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-3">
+                  {task.due_date && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>Due: {format(new Date(task.due_date), 'MMM d, yyyy')}</span>
+                    </div>
+                  )}
+                  <TaskSubmissionsDialog
+                    taskId={task.id}
+                    taskTitle={task.title}
+                    questions={task.questions}
+                  />
+                </div>
               </div>
             </CardHeader>
             {task.description && (
