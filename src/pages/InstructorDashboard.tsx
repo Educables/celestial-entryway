@@ -3,14 +3,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus } from 'lucide-react';
+import { Plus, ScanLine } from 'lucide-react';
 import { CreateCourseDialog } from '@/components/instructor/CreateCourseDialog';
 import { CreateSessionDialog } from '@/components/instructor/CreateSessionDialog';
 import { CoursesList } from '@/components/instructor/CoursesList';
 import { SessionsList } from '@/components/instructor/SessionsList';
+import { useNavigate } from 'react-router-dom';
 
 export default function InstructorDashboard() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [showCreateCourse, setShowCreateCourse] = useState(false);
   const [showCreateSession, setShowCreateSession] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -30,9 +32,15 @@ export default function InstructorDashboard() {
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-4xl font-bold">Hi Teacher! 📚</h1>
-          <Button onClick={signOut} variant="outline">
-            Sign Out
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate('/scanner')} variant="default">
+              <ScanLine className="h-4 w-4 mr-2" />
+              Scanner
+            </Button>
+            <Button onClick={signOut} variant="outline">
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         <Card>

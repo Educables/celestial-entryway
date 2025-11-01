@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance: {
+        Row: {
+          checked_in_at: string
+          id: string
+          session_id: string
+          student_id: string
+        }
+        Insert: {
+          checked_in_at?: string
+          id?: string
+          session_id: string
+          student_id: string
+        }
+        Update: {
+          checked_in_at?: string
+          id?: string
+          session_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses: {
         Row: {
           created_at: string
