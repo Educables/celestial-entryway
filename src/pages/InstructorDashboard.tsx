@@ -1,13 +1,33 @@
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus } from 'lucide-react';
+import { CreateCourseDialog } from '@/components/instructor/CreateCourseDialog';
+import { CreateSessionDialog } from '@/components/instructor/CreateSessionDialog';
+import { CoursesList } from '@/components/instructor/CoursesList';
+import { SessionsList } from '@/components/instructor/SessionsList';
 
 export default function InstructorDashboard() {
   const { user, signOut } = useAuth();
+  const [showCreateCourse, setShowCreateCourse] = useState(false);
+  const [showCreateSession, setShowCreateSession] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleCourseCreated = () => {
+    setShowCreateCourse(false);
+    setRefreshKey(prev => prev + 1);
+  };
+
+  const handleSessionCreated = () => {
+    setShowCreateSession(false);
+    setRefreshKey(prev => prev + 1);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10 p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-4xl font-bold">Hi Teacher! 📚</h1>
           <Button onClick={signOut} variant="outline">
@@ -19,25 +39,51 @@ export default function InstructorDashboard() {
           <CardHeader>
             <CardTitle>Instructor Dashboard</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <p className="text-muted-foreground">
               You're logged in as: <span className="font-semibold text-foreground">{user?.email}</span>
             </p>
-            <div className="pt-4 border-t">
-              <p className="text-sm text-muted-foreground">
-                This is your instructor dashboard. Here you can:
-              </p>
-              <ul className="list-disc list-inside mt-2 space-y-1 text-sm text-muted-foreground">
-                <li>Create and manage courses</li>
-                <li>Create exercise sets and assignments</li>
-                <li>Review student submissions</li>
-                <li>Manage sessions and attendance</li>
-                <li>Upload course materials</li>
-                <li>View student progress and analytics</li>
-              </ul>
-            </div>
           </CardContent>
         </Card>
+
+        <Tabs defaultValue="courses" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="courses">Courses</TabsTrigger>
+            <TabsTrigger value="sessions">Sessions</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="courses" className="space-y-4">
+            <div className="flex justify-end">
+              <Button onClick={() => setShowCreateCourse(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Course
+              </Button>
+            </div>
+            <CoursesList key={`courses-${refreshKey}`} />
+          </TabsContent>
+
+          <TabsContent value="sessions" className="space-y-4">
+            <div className="flex justify-end">
+              <Button onClick={() => setShowCreateSession(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Session
+              </Button>
+            </div>
+            <SessionsList key={`sessions-${refreshKey}`} />
+          </TabsContent>
+        </Tabs>
+
+        <CreateCourseDialog 
+          open={showCreateCourse} 
+          onOpenChange={setShowCreateCourse}
+          onSuccess={handleCourseCreated}
+        />
+        
+        <CreateSessionDialog 
+          open={showCreateSession} 
+          onOpenChange={setShowCreateSession}
+          onSuccess={handleSessionCreated}
+        />
       </div>
     </div>
   );
