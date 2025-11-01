@@ -93,7 +93,7 @@ export default function AttendanceScanner() {
             .from('profiles')
             .select('name, email')
             .eq('id', record.student_id)
-            .single();
+            .maybeSingle();
 
           return {
             ...record,

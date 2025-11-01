@@ -42,11 +42,11 @@ export function EnrolledStudents({ courseId }: EnrolledStudentsProps) {
             .from('profiles')
             .select('name, email')
             .eq('id', enrollment.student_id)
-            .single();
+            .maybeSingle();
 
           return {
             ...enrollment,
-            profiles: profile
+            profiles: profile || { name: 'Unknown', email: 'No email' }
           };
         })
       );
