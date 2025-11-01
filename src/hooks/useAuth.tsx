@@ -64,12 +64,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .maybeSingle();
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       
-      if (data) {
-        setRole(data.role as UserRole);
+      if (data && data.length > 0) {
+        // Priority: admin > instructor > ta > student
+        const rolePriority: Record<UserRole, number> = {
+          admin: 4,
+          instructor: 3,
+          ta: 2,
+          student: 1
+        };
+        
+        const highestRole = data.reduce((highest, current) => {
+          const currentRole = current.role as UserRole;
+          const highestRolePriority = rolePriority[highest] || 0;
+          const currentRolePriority = rolePriority[currentRole] || 0;
+          return currentRolePriority > highestRolePriority ? currentRole : highest;
+        }, 'student' as UserRole);
+        
+        setRole(highestRole);
       } else {
         setRole('student'); // Default to student if no role found
       }
