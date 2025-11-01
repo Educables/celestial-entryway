@@ -7,40 +7,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Shield, UserPlus } from 'lucide-react';
+import { ArrowLeft, Shield } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 
 type UserRole = 'student' | 'ta' | 'instructor' | 'admin';
 
-interface UserWithRoles {
+interface UserWithRole {
   id: string;
   name: string;
   email: string;
-  roles: Array<{
-    role: UserRole;
-    course_id: string | null;
-    course_name?: string;
-  }>;
-}
-
-interface Course {
-  id: string;
-  name: string;
+  role: UserRole;
 }
 
 export default function AdminDashboard() {
   const { user, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [users, setUsers] = useState<UserWithRoles[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<'ta' | 'instructor' | null>(null);
-  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -63,39 +47,21 @@ export default function AdminDashboard() {
 
       if (profilesError) throw profilesError;
 
-      // Fetch all user roles with course info
+      // Fetch all user roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
-        .select(`
-          user_id, 
-          role, 
-          course_id,
-          courses:course_id(name)
-        `);
+        .select('user_id, role');
 
       if (rolesError) throw rolesError;
 
-      // Fetch all courses
-      const { data: coursesData, error: coursesError } = await supabase
-        .from('courses')
-        .select('id, name')
-        .order('name');
-
-      if (coursesError) throw coursesError;
-      setCourses(coursesData || []);
-
-      // Combine profiles with their roles
-      const usersWithRoles: UserWithRoles[] = profiles?.map(profile => {
-        const userRolesList = userRoles?.filter(ur => ur.user_id === profile.id) || [];
+      // Combine profiles with roles
+      const usersWithRoles: UserWithRole[] = profiles?.map(profile => {
+        const userRole = userRoles?.find(ur => ur.user_id === profile.id);
         return {
           id: profile.id,
           name: profile.name,
           email: profile.email,
-          roles: userRolesList.map(ur => ({
-            role: ur.role as UserRole,
-            course_id: ur.course_id,
-            course_name: ur.courses?.name,
-          })),
+          role: (userRole?.role as UserRole) || 'student',
         };
       }) || [];
 
@@ -112,76 +78,46 @@ export default function AdminDashboard() {
     }
   };
 
-  const assignCourseRole = async () => {
-    if (!selectedUser || !selectedRole || !selectedCourse) {
-      toast({
-        title: "Error",
-        description: "Please select a role and course",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const updateUserRole = async (userId: string, newRole: UserRole) => {
     try {
-      const { error } = await supabase
+      // Check if user already has a role entry
+      const { data: existingRole } = await supabase
         .from('user_roles')
-        .insert({
-          user_id: selectedUser,
-          role: selectedRole,
-          course_id: selectedCourse,
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: `${selectedRole === 'instructor' ? 'Teacher' : 'TA'} role assigned successfully`,
-      });
-
-      setDialogOpen(false);
-      setSelectedUser(null);
-      setSelectedRole(null);
-      setSelectedCourse(null);
-      fetchUsers();
-    } catch (error: any) {
-      console.error('Error assigning role:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to assign role",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const removeRole = async (userId: string, role: UserRole, courseId: string | null) => {
-    try {
-      let query = supabase
-        .from('user_roles')
-        .delete()
+        .select('*')
         .eq('user_id', userId)
-        .eq('role', role);
+        .maybeSingle();
 
-      if (courseId) {
-        query = query.eq('course_id', courseId);
+      if (existingRole) {
+        // Update existing role
+        const { error } = await supabase
+          .from('user_roles')
+          .update({ role: newRole })
+          .eq('user_id', userId);
+
+        if (error) throw error;
       } else {
-        query = query.is('course_id', null);
+        // Insert new role
+        const { error } = await supabase
+          .from('user_roles')
+          .insert({ user_id: userId, role: newRole });
+
+        if (error) throw error;
       }
 
-      const { error } = await query;
-
-      if (error) throw error;
+      // Update local state
+      setUsers(users.map(u => 
+        u.id === userId ? { ...u, role: newRole } : u
+      ));
 
       toast({
         title: "Success",
-        description: "Role removed successfully",
+        description: "User role updated successfully",
       });
-
-      fetchUsers();
     } catch (error) {
-      console.error('Error removing role:', error);
+      console.error('Error updating user role:', error);
       toast({
         title: "Error",
-        description: "Failed to remove role",
+        description: "Failed to update user role",
         variant: "destructive",
       });
     }
@@ -218,7 +154,7 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle>User Role Management</CardTitle>
             <CardDescription>
-              Assign Teacher and TA roles to students for specific courses. Admin roles are limited to 4 accounts with emails starting with "admin".
+              Assign roles to users. Changes take effect immediately.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -227,7 +163,7 @@ export default function AdminDashboard() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Roles</TableHead>
+                  <TableHead>Current Role</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -237,102 +173,25 @@ export default function AdminDashboard() {
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {user.roles.map((roleInfo, idx) => (
-                          <Badge 
-                            key={idx} 
-                            variant={roleInfo.role === 'admin' ? 'default' : 'secondary'}
-                            className="gap-1"
-                          >
-                            <span className="capitalize">
-                              {roleInfo.role === 'instructor' ? 'Teacher' : roleInfo.role}
-                            </span>
-                            {roleInfo.course_name && (
-                              <span className="text-xs">({roleInfo.course_name})</span>
-                            )}
-                            {roleInfo.role !== 'admin' && (
-                              <button
-                                onClick={() => removeRole(user.id, roleInfo.role, roleInfo.course_id)}
-                                className="ml-1 hover:text-destructive"
-                              >
-                                ×
-                              </button>
-                            )}
-                          </Badge>
-                        ))}
-                        {user.roles.length === 0 && (
-                          <Badge variant="outline">No roles assigned</Badge>
-                        )}
-                      </div>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary capitalize">
+                        {user.role}
+                      </span>
                     </TableCell>
                     <TableCell>
-                      <Dialog open={dialogOpen && selectedUser === user.id} onOpenChange={(open) => {
-                        setDialogOpen(open);
-                        if (!open) {
-                          setSelectedUser(null);
-                          setSelectedRole(null);
-                          setSelectedCourse(null);
-                        }
-                      }}>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedUser(user.id);
-                              setDialogOpen(true);
-                            }}
-                          >
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Assign Role
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Assign Role to {user.name}</DialogTitle>
-                            <DialogDescription>
-                              Select a role and course to assign to this user.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Role</label>
-                              <Select value={selectedRole || ''} onValueChange={(value: 'ta' | 'instructor') => setSelectedRole(value)}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select role" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="instructor">Teacher (Instructor)</SelectItem>
-                                  <SelectItem value="ta">Teaching Assistant</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Course</label>
-                              <Select value={selectedCourse || ''} onValueChange={setSelectedCourse}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select course" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {courses.map((course) => (
-                                    <SelectItem key={course.id} value={course.id}>
-                                      {course.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button
-                              onClick={assignCourseRole}
-                              disabled={!selectedRole || !selectedCourse}
-                            >
-                              Assign Role
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
+                      <Select
+                        value={user.role}
+                        onValueChange={(value: UserRole) => updateUserRole(user.id, value)}
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="student">Student</SelectItem>
+                          <SelectItem value="ta">Teaching Assistant</SelectItem>
+                          <SelectItem value="instructor">Instructor</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                   </TableRow>
                 ))}

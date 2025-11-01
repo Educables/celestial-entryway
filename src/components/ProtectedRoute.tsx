@@ -19,12 +19,8 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
         // Redirect to appropriate dashboard based on role
         if (role === 'student') {
           navigate('/student');
-        } else if (role === 'instructor') {
+        } else if (role === 'instructor' || role === 'ta' || role === 'admin') {
           navigate('/instructor');
-        } else if (role === 'ta') {
-          navigate('/ta');
-        } else if (role === 'admin') {
-          navigate('/admin');
         }
       }
     }
