@@ -3,6 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CourseMaterials } from './CourseMaterials';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
+import { ChevronDown } from 'lucide-react';
 
 interface Course {
   id: string;
@@ -75,10 +79,22 @@ export function CoursesList() {
               <CardDescription>{course.description}</CardDescription>
             )}
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Created: {new Date(course.created_at).toLocaleDateString()}
             </p>
+            
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full">
+                  <ChevronDown className="w-4 h-4 mr-2" />
+                  Course Materials
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-4">
+                <CourseMaterials courseId={course.id} courseName={course.name} />
+              </CollapsibleContent>
+            </Collapsible>
           </CardContent>
         </Card>
       ))}
