@@ -137,6 +137,27 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
   if (students.length === 0) {
     return (
       <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Enrolled Students (0)
+              </CardTitle>
+              <CardDescription>Students with their total points from course tasks</CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={exportToExcel} variant="outline" size="sm" disabled>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Excel
+              </Button>
+              <Button onClick={exportToPDF} variant="outline" size="sm" disabled>
+                <FileText className="h-4 w-4 mr-2" />
+                PDF
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
         <CardContent className="pt-6">
           <p className="text-center text-muted-foreground">
             No students enrolled yet
