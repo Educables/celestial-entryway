@@ -4,11 +4,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Shield, User, LogOut } from 'lucide-react';
+import { ArrowLeft, Shield, User, LogOut, UserCog } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import AssignRoleDialog from '@/components/admin/AssignRoleDialog';
 
 type UserRole = 'student' | 'ta' | 'instructor' | 'admin';
 
@@ -25,6 +25,8 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -79,6 +81,17 @@ export default function AdminDashboard() {
   };
 
   const updateUserRole = async (userId: string, newRole: UserRole) => {
+    // Open dialog for TA and Instructor roles
+    if (newRole === 'ta' || newRole === 'instructor') {
+      const userToUpdate = users.find(u => u.id === userId);
+      if (userToUpdate) {
+        setSelectedUser(userToUpdate);
+        setDialogOpen(true);
+      }
+      return;
+    }
+
+    // Direct update for Student and Admin roles
     try {
       // Check if user already has a role entry
       const { data: existingRole } = await supabase
@@ -91,7 +104,7 @@ export default function AdminDashboard() {
         // Update existing role
         const { error } = await supabase
           .from('user_roles')
-          .update({ role: newRole })
+          .update({ role: newRole, course_id: null })
           .eq('user_id', userId);
 
         if (error) throw error;
@@ -164,7 +177,7 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle>User Role Management</CardTitle>
             <CardDescription>
-              Assign roles to users. Changes take effect immediately.
+              Assign roles to users. For TA and Instructor roles, you can assign them to specific courses.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -178,30 +191,27 @@ export default function AdminDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
+                {users.map((currentUser) => (
+                  <TableRow key={currentUser.id}>
+                    <TableCell className="font-medium">{currentUser.name}</TableCell>
+                    <TableCell>{currentUser.email}</TableCell>
                     <TableCell>
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary capitalize">
-                        {user.role}
+                        {currentUser.role}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Select
-                        value={user.role}
-                        onValueChange={(value: UserRole) => updateUserRole(user.id, value)}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUser(currentUser);
+                          setDialogOpen(true);
+                        }}
                       >
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="student">Student</SelectItem>
-                          <SelectItem value="ta">Teaching Assistant</SelectItem>
-                          <SelectItem value="instructor">Instructor</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        <UserCog className="h-4 w-4 mr-2" />
+                        Manage Role
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -209,6 +219,17 @@ export default function AdminDashboard() {
             </Table>
           </CardContent>
         </Card>
+
+        {selectedUser && (
+          <AssignRoleDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            userId={selectedUser.id}
+            userName={selectedUser.name}
+            currentRole={selectedUser.role}
+            onRoleUpdated={fetchUsers}
+          />
+        )}
       </div>
     </div>
   );
