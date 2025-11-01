@@ -19,8 +19,10 @@ const Index = () => {
         navigate('/student');
       } else if (role === 'admin') {
         navigate('/admin');
-      } else if (role === 'instructor' || role === 'ta') {
+      } else if (role === 'instructor') {
         navigate('/instructor');
+      } else if (role === 'ta') {
+        navigate('/ta');
       }
     }
   }, [user, role, loading, navigate]);

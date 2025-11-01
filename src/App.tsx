@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import StudentDashboard from "./pages/StudentDashboard";
 import CourseDetail from "./pages/CourseDetail";
 import InstructorDashboard from "./pages/InstructorDashboard";
+import TADashboard from "./pages/TADashboard";
 import Profile from "./pages/Profile";
 import AttendanceScanner from "./pages/AttendanceScanner";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -46,8 +47,16 @@ const App = () => (
             <Route 
               path="/instructor" 
               element={
-                <ProtectedRoute allowedRoles={['instructor', 'ta', 'admin']}>
+                <ProtectedRoute allowedRoles={['instructor', 'admin']}>
                   <InstructorDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/ta" 
+              element={
+                <ProtectedRoute allowedRoles={['ta']}>
+                  <TADashboard />
                 </ProtectedRoute>
               } 
             />
