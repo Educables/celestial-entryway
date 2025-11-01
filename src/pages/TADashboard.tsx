@@ -5,8 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, User, LogOut, GraduationCap } from 'lucide-react';
+import { ArrowLeft, User, LogOut, GraduationCap, ChevronDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { EnrolledStudents } from '@/components/instructor/EnrolledStudents';
 
 interface Course {
   id: string;
@@ -20,6 +22,7 @@ export default function TADashboard() {
   const { toast } = useToast();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openCourses, setOpenCourses] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!authLoading) {
@@ -122,23 +125,53 @@ export default function TADashboard() {
                   You are not currently assigned to any courses.
                 </p>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-4">
                   {courses.map((course) => (
-                    <Card key={course.id} className="cursor-pointer hover:border-primary transition-colors">
-                      <CardHeader>
-                        <CardTitle className="text-lg">{course.name}</CardTitle>
-                        <CardDescription>{course.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Button 
-                          variant="outline" 
-                          className="w-full"
-                          onClick={() => navigate(`/course/${course.id}`)}
-                        >
-                          View Course
-                        </Button>
-                      </CardContent>
-                    </Card>
+                    <Collapsible
+                      key={course.id}
+                      open={openCourses.has(course.id)}
+                      onOpenChange={(isOpen) => {
+                        setOpenCourses(prev => {
+                          const newSet = new Set(prev);
+                          if (isOpen) {
+                            newSet.add(course.id);
+                          } else {
+                            newSet.delete(course.id);
+                          }
+                          return newSet;
+                        });
+                      }}
+                    >
+                      <Card className="hover:border-primary transition-colors">
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg">{course.name}</CardTitle>
+                              <CardDescription>{course.description}</CardDescription>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => navigate(`/course/${course.id}`)}
+                              >
+                                View Course
+                              </Button>
+                              <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <ChevronDown className={`h-4 w-4 transition-transform ${openCourses.has(course.id) ? 'rotate-180' : ''}`} />
+                                </Button>
+                              </CollapsibleTrigger>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CollapsibleContent>
+                          <CardContent>
+                            <EnrolledStudents courseId={course.id} courseName={course.name} />
+                          </CardContent>
+                        </CollapsibleContent>
+                      </Card>
+                    </Collapsible>
                   ))}
                 </div>
               )}
