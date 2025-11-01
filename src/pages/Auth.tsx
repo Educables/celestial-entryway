@@ -13,9 +13,6 @@ import { z } from 'zod';
 const emailSchema = z.string().email('Invalid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 const nameSchema = z.string().min(2, 'Name must be at least 2 characters');
-const roleSchema = z.enum(['student', 'instructor'], { 
-  errorMap: () => ({ message: 'Please select a valid role' }) 
-});
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +25,6 @@ export default function Auth() {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupName, setSignupName] = useState('');
-  const [signupRole, setSignupRole] = useState<'student' | 'instructor'>('student');
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,9 +78,8 @@ export default function Auth() {
       emailSchema.parse(signupEmail);
       passwordSchema.parse(signupPassword);
       nameSchema.parse(signupName);
-      roleSchema.parse(signupRole);
 
-      const { error } = await signUp(signupEmail, signupPassword, signupName, signupRole);
+      const { error } = await signUp(signupEmail, signupPassword, signupName, 'student');
 
       if (error) {
         if (error.message.includes('User already registered')) {
@@ -108,7 +103,6 @@ export default function Auth() {
         setSignupEmail('');
         setSignupPassword('');
         setSignupName('');
-        setSignupRole('student');
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -201,23 +195,6 @@ export default function Auth() {
                     onChange={(e) => setSignupPassword(e.target.value)}
                     required
                   />
-                </div>
-                <div className="space-y-3">
-                  <Label>I am a...</Label>
-                  <RadioGroup value={signupRole} onValueChange={(value) => setSignupRole(value as 'student' | 'instructor')}>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="student" id="role-student" />
-                      <Label htmlFor="role-student" className="font-normal cursor-pointer">
-                        Student
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="instructor" id="role-instructor" />
-                      <Label htmlFor="role-instructor" className="font-normal cursor-pointer">
-                        Instructor/Teacher
-                      </Label>
-                    </div>
-                  </RadioGroup>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Creating account..." : "Sign Up"}
