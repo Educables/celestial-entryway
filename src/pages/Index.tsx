@@ -17,7 +17,9 @@ const Index = () => {
       // Redirect authenticated users to their dashboard
       if (role === 'student') {
         navigate('/student');
-      } else if (role === 'instructor' || role === 'ta' || role === 'admin') {
+      } else if (role === 'admin') {
+        navigate('/admin');
+      } else if (role === 'instructor' || role === 'ta') {
         navigate('/instructor');
       }
     }

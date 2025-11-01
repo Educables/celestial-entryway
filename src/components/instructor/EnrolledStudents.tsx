@@ -3,8 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Users, Mail, FileSpreadsheet, FileText } from "lucide-react";
-import * as XLSX from "xlsx";
+import { Users, Mail, FileText } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -79,25 +78,10 @@ export function EnrolledStudents({ courseId, courseName = "Course" }: EnrolledSt
 
       setStudents(studentsWithProfiles);
     } catch (error) {
-      console.error("[EnrolledStudents] Error fetching enrolled students:", error);
+      console.error("Error fetching enrolled students:", error);
     } finally {
-      console.log("[EnrolledStudents] Loading complete");
       setIsLoading(false);
     }
-  };
-
-  const exportToExcel = () => {
-    const exportData = students.map((student) => ({
-      Name: student.profiles?.name || "Unknown",
-      Email: student.profiles?.email || "No email",
-      "Total Points": student.total_points ?? 0,
-      "Enrolled Date": new Date(student.enrolled_at).toLocaleDateString(),
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Students");
-    XLSX.writeFile(wb, `${courseName}_students.xlsx`);
   };
 
   const exportToPDF = () => {
@@ -159,7 +143,6 @@ export function EnrolledStudents({ courseId, courseName = "Course" }: EnrolledSt
     );
   }
 
-  console.log("[EnrolledStudents] Rendering students list");
   return (
     <Card>
       <CardHeader>
