@@ -2,10 +2,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Check, ArrowRight, User } from 'lucide-react';
+import { BookOpen, Check, ArrowRight, User, FileCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Course {
@@ -22,12 +23,29 @@ export default function StudentDashboard() {
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
+  const [pendingValidationCount, setPendingValidationCount] = useState(0);
 
   useEffect(() => {
     if (user) {
       fetchData();
+      fetchValidationRequestsCount();
     }
   }, [user]);
+
+  const fetchValidationRequestsCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('validation_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('student_id', user?.id)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+      setPendingValidationCount(count || 0);
+    } catch (error) {
+      console.error('Error fetching validation requests count:', error);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -103,6 +121,22 @@ export default function StudentDashboard() {
         <div className="flex justify-between items-center">
           <h1 className="text-4xl font-bold">Available Courses</h1>
           <div className="flex gap-2">
+            <Button 
+              onClick={() => navigate('/validation-requests')} 
+              variant="outline"
+              className="relative"
+            >
+              <FileCheck className="h-4 w-4 mr-2" />
+              Validation Requests
+              {pendingValidationCount > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                >
+                  {pendingValidationCount}
+                </Badge>
+              )}
+            </Button>
             <Button onClick={() => navigate('/profile')} variant="outline">
               <User className="h-4 w-4 mr-2" />
               My Profile

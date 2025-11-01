@@ -295,6 +295,79 @@ export type Database = {
           },
         ]
       }
+      validation_materials: {
+        Row: {
+          file_path: string
+          id: string
+          notes: string | null
+          uploaded_at: string
+          validation_request_id: string
+        }
+        Insert: {
+          file_path: string
+          id?: string
+          notes?: string | null
+          uploaded_at?: string
+          validation_request_id: string
+        }
+        Update: {
+          file_path?: string
+          id?: string
+          notes?: string | null
+          uploaded_at?: string
+          validation_request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_materials_validation_request_id_fkey"
+            columns: ["validation_request_id"]
+            isOneToOne: false
+            referencedRelation: "validation_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_requests: {
+        Row: {
+          created_at: string
+          id: string
+          request_message: string
+          status: string
+          student_id: string
+          ta_id: string
+          task_submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          request_message: string
+          status?: string
+          student_id: string
+          ta_id: string
+          task_submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          request_message?: string
+          status?: string
+          student_id?: string
+          ta_id?: string
+          task_submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_requests_task_submission_id_fkey"
+            columns: ["task_submission_id"]
+            isOneToOne: false
+            referencedRelation: "task_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

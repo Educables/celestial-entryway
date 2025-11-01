@@ -14,6 +14,7 @@ import { Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { RequestValidationDialog } from '@/components/ta/RequestValidationDialog';
 
 interface Submission {
   id: string;
@@ -145,15 +146,22 @@ export default function TaskSubmissionsDialog({
             {submissions.map((submission) => (
               <Card key={submission.id}>
                 <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start gap-4">
                     <div className="flex-1">
                       <CardTitle className="text-lg">{submission.student_name}</CardTitle>
                       <p className="text-sm text-muted-foreground">{submission.student_email}</p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <Badge variant="secondary" className="text-lg font-semibold">
-                        Grade: {submission.grade} pts
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-lg font-semibold">
+                          Grade: {submission.grade} pts
+                        </Badge>
+                        <RequestValidationDialog
+                          submissionId={submission.id}
+                          studentId={submission.student_id}
+                          studentName={submission.student_name}
+                        />
+                      </div>
                       <Badge variant="outline">
                         {format(new Date(submission.submitted_at), 'MMM d, yyyy h:mm a')}
                       </Badge>

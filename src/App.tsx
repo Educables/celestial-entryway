@@ -16,6 +16,7 @@ import AttendanceScanner from "./pages/AttendanceScanner";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import CreateTask from "./pages/CreateTask";
+import ValidationRequests from "./pages/ValidationRequests";
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['instructor', 'admin']}>
                   <CreateTask />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/validation-requests" 
+              element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <ValidationRequests />
                 </ProtectedRoute>
               } 
             />
