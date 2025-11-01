@@ -7,6 +7,7 @@ import { Users, Mail } from 'lucide-react';
 interface Student {
   student_id: string;
   enrolled_at: string;
+  total_points: number;
   profiles: {
     name: string;
     email: string;
@@ -35,7 +36,7 @@ export function EnrolledStudents({ courseId }: EnrolledStudentsProps) {
 
       if (error) throw error;
 
-      // Fetch profile data for each student
+      // Fetch profile data and points for each student
       const studentsWithProfiles = await Promise.all(
         (data || []).map(async (enrollment) => {
           const { data: profile } = await supabase
@@ -44,8 +45,29 @@ export function EnrolledStudents({ courseId }: EnrolledStudentsProps) {
             .eq('id', enrollment.student_id)
             .maybeSingle();
 
+          // Get all task submissions for this student in this course
+          const { data: submissions } = await supabase
+            .from('task_submissions')
+            .select(`
+              grade,
+              tasks!inner(
+                session_id,
+                sessions!inner(
+                  course_id
+                )
+              )
+            `)
+            .eq('student_id', enrollment.student_id)
+            .eq('tasks.sessions.course_id', courseId);
+
+          const totalPoints = (submissions || []).reduce(
+            (sum, submission) => sum + (submission.grade || 0),
+            0
+          );
+
           return {
             ...enrollment,
+            total_points: totalPoints,
             profiles: profile || { name: 'Unknown', email: 'No email' }
           };
         })
@@ -87,7 +109,7 @@ export function EnrolledStudents({ courseId }: EnrolledStudentsProps) {
           <Users className="h-5 w-5" />
           Enrolled Students ({students.length})
         </CardTitle>
-        <CardDescription>Students registered for this course</CardDescription>
+        <CardDescription>Students with their total points from course tasks</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
@@ -110,9 +132,14 @@ export function EnrolledStudents({ courseId }: EnrolledStudentsProps) {
                   </div>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Enrolled: {new Date(student.enrolled_at).toLocaleDateString()}
-              </p>
+              <div className="text-right">
+                <div className="text-lg font-bold text-primary mb-1">
+                  {student.total_points} pts
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enrolled: {new Date(student.enrolled_at).toLocaleDateString()}
+                </p>
+              </div>
             </div>
           ))}
         </div>
