@@ -8,7 +8,9 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, User, LogOut, GraduationCap, ChevronDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EnrolledStudents } from '@/components/instructor/EnrolledStudents';
+import { CourseTasksView } from '@/components/ta/CourseTasksView';
 
 interface Course {
   id: string;
@@ -167,7 +169,18 @@ export default function TADashboard() {
                         </CardHeader>
                         <CollapsibleContent>
                           <CardContent>
-                            <EnrolledStudents courseId={course.id} courseName={course.name} />
+                            <Tabs defaultValue="students" className="w-full">
+                              <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="students">Students</TabsTrigger>
+                                <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                              </TabsList>
+                              <TabsContent value="students" className="mt-4">
+                                <EnrolledStudents courseId={course.id} courseName={course.name} />
+                              </TabsContent>
+                              <TabsContent value="tasks" className="mt-4">
+                                <CourseTasksView courseId={course.id} />
+                              </TabsContent>
+                            </Tabs>
                           </CardContent>
                         </CollapsibleContent>
                       </Card>
