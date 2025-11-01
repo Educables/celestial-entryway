@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Users, Mail, FileSpreadsheet, FileText } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Users, Mail, FileSpreadsheet, FileText } from "lucide-react";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface Student {
   student_id: string;
@@ -23,23 +23,21 @@ interface EnrolledStudentsProps {
   courseName?: string;
 }
 
-export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledStudentsProps) {
+export function EnrolledStudents({ courseId, courseName = "Course" }: EnrolledStudentsProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    console.log('[EnrolledStudents] Mounting component, courseId:', courseId);
     fetchEnrolledStudents();
   }, [courseId]);
 
   const fetchEnrolledStudents = async () => {
-    console.log('[EnrolledStudents] Fetching students for courseId:', courseId);
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('enrollments')
-        .select('student_id, enrolled_at')
-        .eq('course_id', courseId);
+        .from("enrollments")
+        .select("student_id, enrolled_at")
+        .eq("course_id", courseId);
 
       if (error) throw error;
 
@@ -47,15 +45,16 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
       const studentsWithProfiles = await Promise.all(
         (data || []).map(async (enrollment) => {
           const { data: profile } = await supabase
-            .from('profiles')
-            .select('name, email')
-            .eq('id', enrollment.student_id)
+            .from("profiles")
+            .select("name, email")
+            .eq("id", enrollment.student_id)
             .maybeSingle();
 
           // Get all task submissions for this student in this course
           const { data: submissions } = await supabase
-            .from('task_submissions')
-            .select(`
+            .from("task_submissions")
+            .select(
+              `
               grade,
               tasks!inner(
                 session_id,
@@ -63,76 +62,70 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
                   course_id
                 )
               )
-            `)
-            .eq('student_id', enrollment.student_id)
-            .eq('tasks.sessions.course_id', courseId);
+            `,
+            )
+            .eq("student_id", enrollment.student_id)
+            .eq("tasks.sessions.course_id", courseId);
 
-          const totalPoints = (submissions || []).reduce(
-            (sum, submission) => sum + (submission.grade || 0),
-            0
-          );
+          const totalPoints = (submissions || []).reduce((sum, submission) => sum + (submission.grade || 0), 0);
 
           return {
             ...enrollment,
             total_points: totalPoints,
-            profiles: profile || { name: 'Unknown', email: 'No email' }
+            profiles: profile || { name: "Unknown", email: "No email" },
           };
-        })
+        }),
       );
 
-      console.log('[EnrolledStudents] Fetched students:', studentsWithProfiles.length, studentsWithProfiles);
       setStudents(studentsWithProfiles);
     } catch (error) {
-      console.error('[EnrolledStudents] Error fetching enrolled students:', error);
+      console.error("[EnrolledStudents] Error fetching enrolled students:", error);
     } finally {
-      console.log('[EnrolledStudents] Loading complete');
+      console.log("[EnrolledStudents] Loading complete");
       setIsLoading(false);
     }
   };
 
   const exportToExcel = () => {
-    const exportData = students.map(student => ({
-      'Name': student.profiles?.name || 'Unknown',
-      'Email': student.profiles?.email || 'No email',
-      'Total Points': student.total_points ?? 0,
-      'Enrolled Date': new Date(student.enrolled_at).toLocaleDateString()
+    const exportData = students.map((student) => ({
+      Name: student.profiles?.name || "Unknown",
+      Email: student.profiles?.email || "No email",
+      "Total Points": student.total_points ?? 0,
+      "Enrolled Date": new Date(student.enrolled_at).toLocaleDateString(),
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Students');
+    XLSX.utils.book_append_sheet(wb, ws, "Students");
     XLSX.writeFile(wb, `${courseName}_students.xlsx`);
   };
 
   const exportToPDF = () => {
     const doc = new jsPDF();
-    
+
     doc.setFontSize(16);
     doc.text(`${courseName} - Enrolled Students`, 14, 15);
-    
-    const tableData = students.map(student => [
-      student.profiles?.name || 'Unknown',
-      student.profiles?.email || 'No email',
+
+    const tableData = students.map((student) => [
+      student.profiles?.name || "Unknown",
+      student.profiles?.email || "No email",
       `${student.total_points ?? 0}`,
-      new Date(student.enrolled_at).toLocaleDateString()
+      new Date(student.enrolled_at).toLocaleDateString(),
     ]);
 
     autoTable(doc, {
-      head: [['Name', 'Email', 'Total Points', 'Enrolled Date']],
+      head: [["Name", "Email", "Total Points", "Enrolled Date"]],
       body: tableData,
       startY: 25,
-      theme: 'grid',
+      theme: "grid",
       styles: { fontSize: 10 },
-      headStyles: { fillColor: [79, 70, 229] }
+      headStyles: { fillColor: [79, 70, 229] },
     });
 
     doc.save(`${courseName}_students.pdf`);
   };
 
-  console.log('[EnrolledStudents] Render - isLoading:', isLoading, 'students.length:', students.length);
-
   if (isLoading) {
-    console.log('[EnrolledStudents] Rendering loading state');
     return (
       <div className="space-y-2">
         <Skeleton className="h-16 w-full" />
@@ -142,7 +135,6 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
   }
 
   if (students.length === 0) {
-    console.log('[EnrolledStudents] Rendering empty state');
     return (
       <Card>
         <CardHeader>
@@ -161,15 +153,13 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
           </div>
         </CardHeader>
         <CardContent className="pt-6">
-          <p className="text-center text-muted-foreground">
-            No students enrolled yet
-          </p>
+          <p className="text-center text-muted-foreground">No students enrolled yet</p>
         </CardContent>
       </Card>
     );
   }
 
-  console.log('[EnrolledStudents] Rendering students list');
+  console.log("[EnrolledStudents] Rendering students list");
   return (
     <Card>
       <CardHeader>
@@ -199,19 +189,15 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
                   <Users className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="font-medium">
-                    {student.profiles?.name || 'Unknown'}
-                  </p>
+                  <p className="font-medium">{student.profiles?.name || "Unknown"}</p>
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <Mail className="h-3 w-3" />
-                    {student.profiles?.email || 'No email'}
+                    {student.profiles?.email || "No email"}
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-lg font-bold text-primary mb-1">
-                  {student.total_points ?? 0} pts
-                </div>
+                <div className="text-lg font-bold text-primary mb-1">{student.total_points ?? 0} pts</div>
                 <p className="text-xs text-muted-foreground">
                   Enrolled: {new Date(student.enrolled_at).toLocaleDateString()}
                 </p>
