@@ -123,35 +123,38 @@ export function EnrolledStudents({ courseId }: EnrolledStudentsProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {students.map((student) => (
-            <div
-              key={student.student_id}
-              className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Users className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">
-                    {student.profiles?.name || 'Unknown'}
-                  </p>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Mail className="h-3 w-3" />
-                    {student.profiles?.email || 'No email'}
+          {students.map((student) => {
+            console.log('Rendering student:', student.student_id, 'Total points:', student.total_points);
+            return (
+              <div
+                key={student.student_id}
+                className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">
+                      {student.profiles?.name || 'Unknown'}
+                    </p>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Mail className="h-3 w-3" />
+                      {student.profiles?.email || 'No email'}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="text-right">
-                <div className="text-lg font-bold text-primary mb-1">
-                  {student.total_points} pts
+                <div className="text-right">
+                  <div className="text-lg font-bold text-primary mb-1">
+                    {student.total_points ?? 0} pts
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Enrolled: {new Date(student.enrolled_at).toLocaleDateString()}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Enrolled: {new Date(student.enrolled_at).toLocaleDateString()}
-                </p>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>
