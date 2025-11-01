@@ -36,6 +36,8 @@ export function EnrolledStudents({ courseId }: EnrolledStudentsProps) {
 
       if (error) throw error;
 
+      console.log('Fetched enrollments:', data);
+
       // Fetch profile data and points for each student
       const studentsWithProfiles = await Promise.all(
         (data || []).map(async (enrollment) => {
@@ -45,8 +47,10 @@ export function EnrolledStudents({ courseId }: EnrolledStudentsProps) {
             .eq('id', enrollment.student_id)
             .maybeSingle();
 
+          console.log('Profile for student', enrollment.student_id, ':', profile);
+
           // Get all task submissions for this student in this course
-          const { data: submissions } = await supabase
+          const { data: submissions, error: submissionsError } = await supabase
             .from('task_submissions')
             .select(`
               grade,
@@ -60,10 +64,15 @@ export function EnrolledStudents({ courseId }: EnrolledStudentsProps) {
             .eq('student_id', enrollment.student_id)
             .eq('tasks.sessions.course_id', courseId);
 
+          console.log('Submissions for student', enrollment.student_id, ':', submissions);
+          console.log('Submissions error:', submissionsError);
+
           const totalPoints = (submissions || []).reduce(
             (sum, submission) => sum + (submission.grade || 0),
             0
           );
+
+          console.log('Total points for student', enrollment.student_id, ':', totalPoints);
 
           return {
             ...enrollment,
@@ -73,6 +82,7 @@ export function EnrolledStudents({ courseId }: EnrolledStudentsProps) {
         })
       );
 
+      console.log('Final students with profiles:', studentsWithProfiles);
       setStudents(studentsWithProfiles);
     } catch (error) {
       console.error('Error fetching enrolled students:', error);
