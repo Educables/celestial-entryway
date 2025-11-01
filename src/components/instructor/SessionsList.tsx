@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, ChevronDown } from 'lucide-react';
+import { Calendar, Clock, ChevronDown, ClipboardList } from 'lucide-react';
 import { SessionAttendance } from './SessionAttendance';
-import CreateTaskDialog from './CreateTaskDialog';
 import SessionTasks from './SessionTasks';
 
 interface Session {
@@ -22,6 +22,7 @@ interface Session {
 }
 
 export function SessionsList() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -139,11 +140,14 @@ export function SessionsList() {
 
             <div className="space-y-3">
               <div className="flex gap-2">
-                <CreateTaskDialog 
-                  sessionId={session.id} 
-                  courseMaterials={materials[session.course_id] || []}
-                  onTaskCreated={() => setTaskRefresh(prev => prev + 1)}
-                />
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate(`/create-task/${session.id}?materials=${materials[session.course_id]?.join(',') || ''}`)}
+                >
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Create Task
+                </Button>
               </div>
 
               <Collapsible>

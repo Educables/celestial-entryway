@@ -15,6 +15,7 @@ import Profile from "./pages/Profile";
 import AttendanceScanner from "./pages/AttendanceScanner";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import CreateTask from "./pages/CreateTask";
 
 const queryClient = new QueryClient();
 
@@ -81,6 +82,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/create-task/:sessionId" 
+              element={
+                <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+                  <CreateTask />
                 </ProtectedRoute>
               } 
             />
