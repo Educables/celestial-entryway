@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,19 +9,59 @@ import { CreateSessionDialog } from '@/components/instructor/CreateSessionDialog
 import { CoursesList } from '@/components/instructor/CoursesList';
 import { SessionsList } from '@/components/instructor/SessionsList';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export default function InstructorDashboard() {
   const { user, role, signOut } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [showCreateCourse, setShowCreateCourse] = useState(false);
   const [showCreateSession, setShowCreateSession] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [hasCourses, setHasCourses] = useState(false);
+  const [isCheckingCourses, setIsCheckingCourses] = useState(true);
 
   // Additional security check
   if (role && !['instructor', 'ta', 'admin'].includes(role)) {
     navigate('/student');
     return null;
   }
+
+  useEffect(() => {
+    if (user) {
+      checkCourses();
+    }
+  }, [user, refreshKey]);
+
+  const checkCourses = async () => {
+    setIsCheckingCourses(true);
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id')
+        .limit(1);
+
+      if (error) throw error;
+      setHasCourses((data?.length || 0) > 0);
+    } catch (error: any) {
+      console.error('Error checking courses:', error);
+    } finally {
+      setIsCheckingCourses(false);
+    }
+  };
+
+  const handleCreateSessionClick = () => {
+    if (!hasCourses) {
+      toast({
+        title: 'No courses available',
+        description: 'Please create a course first before scheduling sessions.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setShowCreateSession(true);
+  };
 
   const handleCourseCreated = () => {
     setShowCreateCourse(false);
@@ -78,11 +118,23 @@ export default function InstructorDashboard() {
 
           <TabsContent value="sessions" className="space-y-4">
             <div className="flex justify-end">
-              <Button onClick={() => setShowCreateSession(true)}>
+              <Button 
+                onClick={handleCreateSessionClick}
+                disabled={!hasCourses || isCheckingCourses}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Create Session
               </Button>
             </div>
+            {!hasCourses && !isCheckingCourses && (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-center text-muted-foreground">
+                    Please create a course first before scheduling sessions.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
             <SessionsList key={`sessions-${refreshKey}`} />
           </TabsContent>
         </Tabs>

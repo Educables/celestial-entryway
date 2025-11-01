@@ -136,32 +136,38 @@ export function CreateSessionDialog({ open, onOpenChange, onSuccess }: CreateSes
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="course_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Course</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a course" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>
-                          {course.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        {courses.length === 0 ? (
+          <div className="py-8 text-center text-muted-foreground">
+            <p className="mb-2">No courses available.</p>
+            <p className="text-sm">Please create a course first before scheduling sessions.</p>
+          </div>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="course_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Course</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a course" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {courses.map((course) => (
+                          <SelectItem key={course.id} value={course.id}>
+                            {course.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
             <FormField
               control={form.control}
@@ -205,16 +211,17 @@ export function CreateSessionDialog({ open, onOpenChange, onSuccess }: CreateSes
               )}
             />
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Creating...' : 'Create Session'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? 'Creating...' : 'Create Session'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        )}
       </DialogContent>
     </Dialog>
   );
