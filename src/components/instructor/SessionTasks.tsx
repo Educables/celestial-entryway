@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Trash2, Users } from 'lucide-react';
 import { format } from 'date-fns';
+import TaskSubmissionsDialog from './TaskSubmissionsDialog';
 
 interface Task {
   id: string;
@@ -141,9 +142,16 @@ export default function SessionTasks({ sessionId, onRefresh }: SessionTasksProps
                 {format(new Date(task.due_date), 'MMM d, yyyy h:mm a')}
               </div>
             )}
-            <div className="flex items-center gap-1 text-muted-foreground pt-2">
-              <Users className="h-4 w-4" />
-              <span>{task.submission_count} submission{task.submission_count !== 1 ? 's' : ''}</span>
+            <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Users className="h-4 w-4" />
+                <span>{task.submission_count} submission{task.submission_count !== 1 ? 's' : ''}</span>
+              </div>
+              <TaskSubmissionsDialog
+                taskId={task.id}
+                taskTitle={task.title}
+                questions={task.questions}
+              />
             </div>
           </CardContent>
         </Card>
