@@ -11,11 +11,17 @@ import { SessionsList } from '@/components/instructor/SessionsList';
 import { useNavigate } from 'react-router-dom';
 
 export default function InstructorDashboard() {
-  const { user, signOut } = useAuth();
+  const { user, role, signOut } = useAuth();
   const navigate = useNavigate();
   const [showCreateCourse, setShowCreateCourse] = useState(false);
   const [showCreateSession, setShowCreateSession] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Additional security check
+  if (role && !['instructor', 'ta', 'admin'].includes(role)) {
+    navigate('/student');
+    return null;
+  }
 
   const handleCourseCreated = () => {
     setShowCreateCourse(false);
