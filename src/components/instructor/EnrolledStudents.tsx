@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Mail } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, Mail, FileSpreadsheet, FileText } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Student {
   student_id: string;
@@ -16,9 +20,10 @@ interface Student {
 
 interface EnrolledStudentsProps {
   courseId: string;
+  courseName?: string;
 }
 
-export function EnrolledStudents({ courseId }: EnrolledStudentsProps) {
+export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledStudentsProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -81,6 +86,45 @@ export function EnrolledStudents({ courseId }: EnrolledStudentsProps) {
     }
   };
 
+  const exportToExcel = () => {
+    const exportData = students.map(student => ({
+      'Name': student.profiles?.name || 'Unknown',
+      'Email': student.profiles?.email || 'No email',
+      'Total Points': student.total_points ?? 0,
+      'Enrolled Date': new Date(student.enrolled_at).toLocaleDateString()
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Students');
+    XLSX.writeFile(wb, `${courseName}_students.xlsx`);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(16);
+    doc.text(`${courseName} - Enrolled Students`, 14, 15);
+    
+    const tableData = students.map(student => [
+      student.profiles?.name || 'Unknown',
+      student.profiles?.email || 'No email',
+      `${student.total_points ?? 0}`,
+      new Date(student.enrolled_at).toLocaleDateString()
+    ]);
+
+    autoTable(doc, {
+      head: [['Name', 'Email', 'Total Points', 'Enrolled Date']],
+      body: tableData,
+      startY: 25,
+      theme: 'grid',
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [79, 70, 229] }
+    });
+
+    doc.save(`${courseName}_students.pdf`);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -105,11 +149,25 @@ export function EnrolledStudents({ courseId }: EnrolledStudentsProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Enrolled Students ({students.length})
-        </CardTitle>
-        <CardDescription>Students with their total points from course tasks</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Enrolled Students ({students.length})
+            </CardTitle>
+            <CardDescription>Students with their total points from course tasks</CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={exportToExcel} variant="outline" size="sm">
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export Excel
+            </Button>
+            <Button onClick={exportToPDF} variant="outline" size="sm">
+              <FileText className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">

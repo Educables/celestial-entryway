@@ -93,7 +93,7 @@ export function CoursesList() {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-4">
-                <EnrolledStudents courseId={course.id} />
+                <EnrolledStudents courseId={course.id} courseName={course.name} />
               </CollapsibleContent>
             </Collapsible>
 
