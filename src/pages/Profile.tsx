@@ -14,21 +14,32 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('Profile page mounted. User:', user?.id, 'Role:', role);
     if (user?.id && role === 'student') {
+      console.log('Fetching total points for student');
       fetchTotalPoints();
+    } else {
+      console.log('Not fetching points. User ID:', user?.id, 'Role:', role);
+      setLoading(false);
     }
   }, [user?.id, role]);
 
   const fetchTotalPoints = async () => {
     try {
+      console.log('Fetching task submissions for user:', user?.id);
       const { data, error } = await supabase
         .from('task_submissions')
         .select('grade')
         .eq('student_id', user?.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error from Supabase:', error);
+        throw error;
+      }
 
+      console.log('Fetched submissions:', data);
       const total = (data || []).reduce((sum, submission) => sum + (submission.grade || 0), 0);
+      console.log('Calculated total points:', total);
       setTotalPoints(total);
     } catch (error) {
       console.error('Error fetching total points:', error);
