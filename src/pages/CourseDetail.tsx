@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, Clock, ArrowLeft, Check } from 'lucide-react';
+import { Calendar, Clock, ArrowLeft, Check, Download, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -23,15 +23,23 @@ interface Session {
   course_id: string;
 }
 
+interface Material {
+  name: string;
+  id: string;
+  created_at: string;
+}
+
 export default function CourseDetail() {
   const { courseId } = useParams<{ courseId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [course, setCourse] = useState<Course | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
   const [registeredSessionIds, setRegisteredSessionIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [registeringSessionId, setRegisteringSessionId] = useState<string | null>(null);
+  const [downloadingMaterial, setDownloadingMaterial] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && courseId) {
@@ -57,19 +65,22 @@ export default function CourseDetail() {
         return;
       }
 
-      // Fetch course details, sessions, and registrations
-      const [courseResult, sessionsResult, registrationsResult] = await Promise.all([
+      // Fetch course details, sessions, registrations, and materials
+      const [courseResult, sessionsResult, registrationsResult, materialsResult] = await Promise.all([
         supabase.from('courses').select('*').eq('id', courseId!).single(),
         supabase.from('sessions').select('*').eq('course_id', courseId!).order('start_time', { ascending: true }),
-        supabase.from('session_registrations').select('session_id').eq('student_id', user!.id)
+        supabase.from('session_registrations').select('session_id').eq('student_id', user!.id),
+        supabase.storage.from('course-materials').list(courseId!, { sortBy: { column: 'created_at', order: 'desc' } })
       ]);
 
       if (courseResult.error) throw courseResult.error;
       if (sessionsResult.error) throw sessionsResult.error;
       if (registrationsResult.error) throw registrationsResult.error;
+      if (materialsResult.error) throw materialsResult.error;
 
       setCourse(courseResult.data);
       setSessions(sessionsResult.data || []);
+      setMaterials(materialsResult.data || []);
       setRegisteredSessionIds(new Set(registrationsResult.data?.map(r => r.session_id) || []));
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -127,6 +138,36 @@ export default function CourseDetail() {
     }
   };
 
+  const handleDownloadMaterial = async (fileName: string) => {
+    if (!courseId) return;
+
+    setDownloadingMaterial(fileName);
+    try {
+      const { data, error } = await supabase.storage
+        .from('course-materials')
+        .download(`${courseId}/${fileName}`);
+
+      if (error) throw error;
+
+      // Create a download link
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success('Material downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading material:', error);
+      toast.error('Failed to download material');
+    } finally {
+      setDownloadingMaterial(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10 p-8">
@@ -162,6 +203,50 @@ export default function CourseDetail() {
             </CardDescription>
           </CardHeader>
         </Card>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Course Materials</h2>
+          {materials.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <p className="text-muted-foreground">No materials available yet.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {materials.map((material) => {
+                const isDownloading = downloadingMaterial === material.name;
+                
+                return (
+                  <Card key={material.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-start gap-3">
+                        <FileText className="h-5 w-5 text-primary mt-1" />
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base truncate">{material.name}</CardTitle>
+                          <CardDescription className="text-xs mt-1">
+                            Added {format(new Date(material.created_at), 'PP')}
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardFooter>
+                      <Button
+                        onClick={() => handleDownloadMaterial(material.name)}
+                        disabled={isDownloading}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {isDownloading ? 'Downloading...' : 'Download'}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         <div>
           <h2 className="text-2xl font-bold mb-4">Sessions</h2>
