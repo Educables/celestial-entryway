@@ -28,10 +28,12 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log('[EnrolledStudents] Mounting component, courseId:', courseId);
     fetchEnrolledStudents();
   }, [courseId]);
 
   const fetchEnrolledStudents = async () => {
+    console.log('[EnrolledStudents] Fetching students for courseId:', courseId);
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -78,10 +80,12 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
         })
       );
 
+      console.log('[EnrolledStudents] Fetched students:', studentsWithProfiles.length, studentsWithProfiles);
       setStudents(studentsWithProfiles);
     } catch (error) {
-      console.error('Error fetching enrolled students:', error);
+      console.error('[EnrolledStudents] Error fetching enrolled students:', error);
     } finally {
+      console.log('[EnrolledStudents] Loading complete');
       setIsLoading(false);
     }
   };
@@ -125,7 +129,10 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
     doc.save(`${courseName}_students.pdf`);
   };
 
+  console.log('[EnrolledStudents] Render - isLoading:', isLoading, 'students.length:', students.length);
+
   if (isLoading) {
+    console.log('[EnrolledStudents] Rendering loading state');
     return (
       <div className="space-y-2">
         <Skeleton className="h-16 w-full" />
@@ -135,6 +142,7 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
   }
 
   if (students.length === 0) {
+    console.log('[EnrolledStudents] Rendering empty state');
     return (
       <Card>
         <CardHeader>
@@ -161,6 +169,7 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
     );
   }
 
+  console.log('[EnrolledStudents] Rendering students list');
   return (
     <Card>
       <CardHeader>
