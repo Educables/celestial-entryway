@@ -3,11 +3,39 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { ArrowLeft, Download, User } from 'lucide-react';
+import { ArrowLeft, Download, User, Trophy } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Profile() {
   const { user, role, signOut } = useAuth();
   const navigate = useNavigate();
+  const [totalPoints, setTotalPoints] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user?.id && role === 'student') {
+      fetchTotalPoints();
+    }
+  }, [user?.id, role]);
+
+  const fetchTotalPoints = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('task_submissions')
+        .select('grade')
+        .eq('student_id', user?.id);
+
+      if (error) throw error;
+
+      const total = (data || []).reduce((sum, submission) => sum + (submission.grade || 0), 0);
+      setTotalPoints(total);
+    } catch (error) {
+      console.error('Error fetching total points:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDownloadQR = () => {
     const svg = document.getElementById('student-qr-code');
@@ -99,6 +127,34 @@ export default function Profile() {
             </Button>
           </CardContent>
         </Card>
+
+        {role === 'student' && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Trophy className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle>Academic Performance</CardTitle>
+                  <CardDescription>Your total points from all tasks</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-6">
+                {loading ? (
+                  <p className="text-muted-foreground">Loading...</p>
+                ) : (
+                  <>
+                    <div className="text-5xl font-bold text-primary mb-2">{totalPoints}</div>
+                    <p className="text-lg text-muted-foreground">Total Points</p>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
