@@ -1,10 +1,11 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Course {
   id: string;
@@ -16,27 +17,81 @@ interface Course {
 export default function StudentDashboard() {
   const { user, signOut } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
-      fetchCourses();
+      fetchData();
     }
   }, [user]);
 
-  const fetchCourses = async () => {
+  const fetchData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const [coursesResult, enrollmentsResult] = await Promise.all([
+        supabase.from('courses').select('*').order('created_at', { ascending: false }),
+        supabase.from('enrollments').select('course_id').eq('student_id', user!.id)
+      ]);
 
-      if (error) throw error;
-      setCourses(data || []);
+      if (coursesResult.error) throw coursesResult.error;
+      if (enrollmentsResult.error) throw enrollmentsResult.error;
+
+      setCourses(coursesResult.data || []);
+      setEnrolledCourseIds(new Set(enrollmentsResult.data?.map(e => e.course_id) || []));
     } catch (error) {
-      console.error('Error fetching courses:', error);
+      console.error('Error fetching data:', error);
+      toast.error('Failed to load courses');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleEnroll = async (courseId: string) => {
+    if (!user) return;
+    
+    setEnrollingCourseId(courseId);
+    try {
+      const { error } = await supabase
+        .from('enrollments')
+        .insert({ student_id: user.id, course_id: courseId });
+
+      if (error) throw error;
+
+      setEnrolledCourseIds(prev => new Set([...prev, courseId]));
+      toast.success('Successfully enrolled in course!');
+    } catch (error) {
+      console.error('Error enrolling:', error);
+      toast.error('Failed to enroll in course');
+    } finally {
+      setEnrollingCourseId(null);
+    }
+  };
+
+  const handleUnenroll = async (courseId: string) => {
+    if (!user) return;
+    
+    setEnrollingCourseId(courseId);
+    try {
+      const { error } = await supabase
+        .from('enrollments')
+        .delete()
+        .eq('student_id', user.id)
+        .eq('course_id', courseId);
+
+      if (error) throw error;
+
+      setEnrolledCourseIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(courseId);
+        return newSet;
+      });
+      toast.success('Successfully unenrolled from course');
+    } catch (error) {
+      console.error('Error unenrolling:', error);
+      toast.error('Failed to unenroll from course');
+    } finally {
+      setEnrollingCourseId(null);
     }
   };
 
@@ -71,21 +126,47 @@ export default function StudentDashboard() {
               </CardContent>
             </Card>
           ) : (
-            courses.map((course) => (
-              <Card key={course.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start gap-3">
-                    <BookOpen className="h-5 w-5 text-primary mt-1" />
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{course.name}</CardTitle>
-                      <CardDescription className="mt-2">
-                        {course.description || 'No description available'}
-                      </CardDescription>
+            courses.map((course) => {
+              const isEnrolled = enrolledCourseIds.has(course.id);
+              const isProcessing = enrollingCourseId === course.id;
+              
+              return (
+                <Card key={course.id} className="hover:shadow-lg transition-shadow flex flex-col">
+                  <CardHeader>
+                    <div className="flex items-start gap-3">
+                      <BookOpen className="h-5 w-5 text-primary mt-1" />
+                      <div className="flex-1">
+                        <CardTitle className="text-lg">{course.name}</CardTitle>
+                        <CardDescription className="mt-2">
+                          {course.description || 'No description available'}
+                        </CardDescription>
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-              </Card>
-            ))
+                  </CardHeader>
+                  <CardFooter className="mt-auto">
+                    {isEnrolled ? (
+                      <Button
+                        onClick={() => handleUnenroll(course.id)}
+                        disabled={isProcessing}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        {isProcessing ? 'Processing...' : 'Enrolled'}
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => handleEnroll(course.id)}
+                        disabled={isProcessing}
+                        className="w-full"
+                      >
+                        {isProcessing ? 'Enrolling...' : 'Enroll'}
+                      </Button>
+                    )}
+                  </CardFooter>
+                </Card>
+              );
+            })
           )}
         </div>
       </div>
