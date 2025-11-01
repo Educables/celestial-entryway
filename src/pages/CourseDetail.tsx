@@ -8,6 +8,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, ArrowLeft, Check, Download, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import TaskSubmission from '@/components/student/TaskSubmission';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Course {
   id: string;
@@ -279,6 +281,20 @@ export default function CourseDetail() {
                         </div>
                       </CardDescription>
                     </CardHeader>
+                    <CardContent className="space-y-3">
+                      {isRegistered ? (
+                        <Collapsible>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="outline" className="w-full">
+                              View Tasks & Homework
+                            </Button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="mt-4">
+                            <TaskSubmission sessionId={session.id} studentId={user!.id} />
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ) : null}
+                    </CardContent>
                     <CardFooter className="mt-auto">
                       {isRegistered ? (
                         <Button

@@ -184,6 +184,82 @@ export type Database = {
           },
         ]
       }
+      task_submissions: {
+        Row: {
+          answers: Json
+          id: string
+          student_id: string
+          submitted_at: string
+          task_id: string
+        }
+        Insert: {
+          answers: Json
+          id?: string
+          student_id: string
+          submitted_at?: string
+          task_id: string
+        }
+        Update: {
+          answers?: Json
+          id?: string
+          student_id?: string
+          submitted_at?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_submissions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          material_reference: string | null
+          num_questions: number
+          options: string[]
+          session_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          material_reference?: string | null
+          num_questions: number
+          options?: string[]
+          session_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          material_reference?: string | null
+          num_questions?: number
+          options?: string[]
+          session_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null

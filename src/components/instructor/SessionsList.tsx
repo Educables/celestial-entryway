@@ -7,6 +7,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Button } from '@/components/ui/button';
 import { Calendar, Clock, ChevronDown } from 'lucide-react';
 import { SessionAttendance } from './SessionAttendance';
+import CreateTaskDialog from './CreateTaskDialog';
+import SessionTasks from './SessionTasks';
 
 interface Session {
   id: string;
@@ -23,12 +25,27 @@ export function SessionsList() {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [materials, setMaterials] = useState<Record<string, string[]>>({});
+  const [taskRefresh, setTaskRefresh] = useState(0);
 
   useEffect(() => {
     if (user) {
       fetchSessions();
     }
   }, [user]);
+
+  const fetchCourseMaterials = async (courseId: string) => {
+    const { data, error } = await supabase.storage
+      .from('course-materials')
+      .list(courseId);
+    
+    if (error) {
+      console.error('Error fetching materials:', error);
+      return [];
+    }
+    
+    return data?.map(file => file.name) || [];
+  };
 
   const fetchSessions = async () => {
     if (!user) return;
@@ -44,6 +61,15 @@ export function SessionsList() {
 
     if (!error && data) {
       setSessions(data as Session[]);
+      
+      // Fetch materials for each course
+      const materialsMap: Record<string, string[]> = {};
+      for (const session of data) {
+        if (!materialsMap[session.course_id]) {
+          materialsMap[session.course_id] = await fetchCourseMaterials(session.course_id);
+        }
+      }
+      setMaterials(materialsMap);
     }
     setIsLoading(false);
   };
@@ -111,17 +137,39 @@ export function SessionsList() {
               </div>
             </div>
 
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <Button variant="outline" className="w-full">
-                  <ChevronDown className="w-4 h-4 mr-2" />
-                  View Attendance
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-4">
-                <SessionAttendance sessionId={session.id} courseId={session.course_id} />
-              </CollapsibleContent>
-            </Collapsible>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <CreateTaskDialog 
+                  sessionId={session.id} 
+                  courseMaterials={materials[session.course_id] || []}
+                  onTaskCreated={() => setTaskRefresh(prev => prev + 1)}
+                />
+              </div>
+
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full">
+                    <ChevronDown className="w-4 h-4 mr-2" />
+                    View Tasks
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-4">
+                  <SessionTasks sessionId={session.id} onRefresh={taskRefresh} />
+                </CollapsibleContent>
+              </Collapsible>
+
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full">
+                    <ChevronDown className="w-4 h-4 mr-2" />
+                    View Attendance
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-4">
+                  <SessionAttendance sessionId={session.id} courseId={session.course_id} />
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
           </CardContent>
         </Card>
       ))}
