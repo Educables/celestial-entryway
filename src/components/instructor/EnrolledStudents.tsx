@@ -146,16 +146,10 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
               </CardTitle>
               <CardDescription>Students with their total points from course tasks</CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={exportToExcel} variant="outline" size="sm" disabled>
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Excel
-              </Button>
-              <Button onClick={exportToPDF} variant="outline" size="sm" disabled>
-                <FileText className="h-4 w-4 mr-2" />
-                PDF
-              </Button>
-            </div>
+            <Button onClick={exportToPDF} variant="outline" size="sm" disabled>
+              <FileText className="h-4 w-4 mr-2" />
+              Export Students
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="pt-6">
@@ -178,16 +172,10 @@ export function EnrolledStudents({ courseId, courseName = 'Course' }: EnrolledSt
             </CardTitle>
             <CardDescription>Students with their total points from course tasks</CardDescription>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={exportToExcel} variant="outline" size="sm">
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Excel
-            </Button>
-            <Button onClick={exportToPDF} variant="outline" size="sm">
-              <FileText className="h-4 w-4 mr-2" />
-              PDF
-            </Button>
-          </div>
+          <Button onClick={exportToPDF} variant="outline" size="sm">
+            <FileText className="h-4 w-4 mr-2" />
+            Export Students
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
