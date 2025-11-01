@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
-import { BookOpen, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BookOpen, Check, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Course {
@@ -16,6 +17,7 @@ interface Course {
 
 export default function StudentDashboard() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
@@ -143,17 +145,25 @@ export default function StudentDashboard() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardFooter className="mt-auto">
+                  <CardFooter className="mt-auto flex gap-2">
                     {isEnrolled ? (
-                      <Button
-                        onClick={() => handleUnenroll(course.id)}
-                        disabled={isProcessing}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        <Check className="h-4 w-4 mr-2" />
-                        {isProcessing ? 'Processing...' : 'Enrolled'}
-                      </Button>
+                      <>
+                        <Button
+                          onClick={() => navigate(`/student/course/${course.id}`)}
+                          className="flex-1"
+                        >
+                          View Sessions
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </Button>
+                        <Button
+                          onClick={() => handleUnenroll(course.id)}
+                          disabled={isProcessing}
+                          variant="outline"
+                          size="icon"
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      </>
                     ) : (
                       <Button
                         onClick={() => handleEnroll(course.id)}

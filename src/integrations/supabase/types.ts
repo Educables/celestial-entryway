@@ -91,6 +91,35 @@ export type Database = {
         }
         Relationships: []
       }
+      session_registrations: {
+        Row: {
+          id: string
+          registered_at: string
+          session_id: string
+          student_id: string
+        }
+        Insert: {
+          id?: string
+          registered_at?: string
+          session_id: string
+          student_id: string
+        }
+        Update: {
+          id?: string
+          registered_at?: string
+          session_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_registrations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           course_id: string

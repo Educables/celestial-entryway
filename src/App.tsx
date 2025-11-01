@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import StudentDashboard from "./pages/StudentDashboard";
+import CourseDetail from "./pages/CourseDetail";
 import InstructorDashboard from "./pages/InstructorDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -28,6 +29,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['student']}>
                   <StudentDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/student/course/:courseId" 
+              element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <CourseDetail />
                 </ProtectedRoute>
               } 
             />
