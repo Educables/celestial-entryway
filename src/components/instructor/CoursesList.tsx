@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CourseMaterials } from './CourseMaterials';
+import { EnrolledStudents } from './EnrolledStudents';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { ChevronDown } from 'lucide-react';
@@ -84,6 +85,18 @@ export function CoursesList() {
               Created: {new Date(course.created_at).toLocaleDateString()}
             </p>
             
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full">
+                  <ChevronDown className="w-4 h-4 mr-2" />
+                  Enrolled Students
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-4">
+                <EnrolledStudents courseId={course.id} />
+              </CollapsibleContent>
+            </Collapsible>
+
             <Collapsible>
               <CollapsibleTrigger asChild>
                 <Button variant="outline" className="w-full">

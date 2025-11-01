@@ -3,7 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calendar, Clock } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
+import { Calendar, Clock, ChevronDown } from 'lucide-react';
+import { SessionAttendance } from './SessionAttendance';
 
 interface Session {
   id: string;
@@ -94,17 +97,31 @@ export function SessionsList() {
             </CardTitle>
             <CardDescription>{session.courses.name}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Start:</span>
-              <span>{formatDateTime(session.start_time)}</span>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Start:</span>
+                <span>{formatDateTime(session.start_time)}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">End:</span>
+                <span>{formatDateTime(session.end_time)}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">End:</span>
-              <span>{formatDateTime(session.end_time)}</span>
-            </div>
+
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full">
+                  <ChevronDown className="w-4 h-4 mr-2" />
+                  View Attendance
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-4">
+                <SessionAttendance sessionId={session.id} courseId={session.course_id} />
+              </CollapsibleContent>
+            </Collapsible>
           </CardContent>
         </Card>
       ))}
