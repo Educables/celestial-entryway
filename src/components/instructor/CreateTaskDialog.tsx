@@ -107,11 +107,11 @@ export default function CreateTaskDialog({ sessionId, courseMaterials, onTaskCre
           Create Task
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Homework Task</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="title">Task Title</Label>
             <Input
@@ -167,14 +167,14 @@ export default function CreateTaskDialog({ sessionId, courseMaterials, onTaskCre
 
           <div className="space-y-3">
             <Label>Options and Points for Each Question</Label>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
+            <div className="space-y-4">
               {Array.from({ length: numQuestions }, (_, i) => i + 1).map((qNum) => {
                 const options = questionOptions[qNum] || [];
                 return (
-                  <div key={qNum} className="space-y-2 border rounded-lg p-3">
-                    <Label className="text-sm font-medium">Question {qNum}</Label>
+                  <div key={qNum} className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                    <Label className="text-sm font-semibold">Question {qNum}</Label>
                     {options.map((opt, idx) => (
-                      <div key={idx} className="flex gap-2 items-center">
+                      <div key={idx} className="flex gap-3 items-center">
                         <Input
                           value={opt.text}
                           onChange={(e) => {
@@ -240,7 +240,7 @@ export default function CreateTaskDialog({ sessionId, courseMaterials, onTaskCre
             />
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
