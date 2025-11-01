@@ -1,9 +1,11 @@
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
@@ -27,10 +29,10 @@ const Navbar = () => {
             <a href="#pricing" className="text-foreground hover:text-primary transition-colors font-medium">
               Pricing
             </a>
-            <Button variant="outline" className="border-2">
+            <Button variant="outline" className="border-2" onClick={() => navigate('/auth')}>
               Sign In
             </Button>
-            <Button className="bg-gradient-hero">
+            <Button className="bg-gradient-hero" onClick={() => navigate('/auth')}>
               Get Started
             </Button>
           </div>
@@ -57,10 +59,10 @@ const Navbar = () => {
               <a href="#pricing" className="text-foreground hover:text-primary transition-colors font-medium py-2">
                 Pricing
               </a>
-              <Button variant="outline" className="border-2 w-full">
+              <Button variant="outline" className="border-2 w-full" onClick={() => navigate('/auth')}>
                 Sign In
               </Button>
-              <Button className="bg-gradient-hero w-full">
+              <Button className="bg-gradient-hero w-full" onClick={() => navigate('/auth')}>
                 Get Started
               </Button>
             </div>
