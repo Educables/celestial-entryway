@@ -112,27 +112,17 @@ serve(async (req) => {
       );
     }
 
-    // Determine media type early for validation
+    // Layer 1: Validate file extension
     const fileExt = material.file_path.split('.').pop()?.toLowerCase();
-    const mediaTypes: Record<string, string> = {
-      'pdf': 'application/pdf',
-      'png': 'image/png',
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'webp': 'image/webp',
-      'gif': 'image/gif'
-    };
+    const allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg', 'webp', 'gif'];
     
-    const mediaType = mediaTypes[fileExt || ''];
-    
-    // Check if file type is supported
-    if (!mediaType) {
-      console.error('Unsupported file type:', fileExt);
+    if (!fileExt || !allowedExtensions.includes(fileExt)) {
+      console.error('Unsupported file extension:', fileExt);
       await supabaseClient
         .from('validation_materials')
         .update({ 
           ai_validation_status: 'error',
-          ai_validation_result: `Unsupported file type: ${fileExt}. Please upload PDF or image files (PNG, JPG, JPEG, WEBP, GIF).`
+          ai_validation_result: `Unsupported file type: .${fileExt}. Please upload PDF or image files (PNG, JPG, JPEG, WEBP, GIF).`
         })
         .eq('id', materialId);
       
@@ -142,7 +132,19 @@ serve(async (req) => {
       );
     }
 
-    const isPdf = mediaType === 'application/pdf';
+    // Layer 2: Map extension to MIME type
+    const mediaTypes: Record<string, string> = {
+      'pdf': 'application/pdf',
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'webp': 'image/webp',
+      'gif': 'image/gif'
+    };
+    
+    const expectedMediaType = mediaTypes[fileExt];
+
+    const isPdf = expectedMediaType === 'application/pdf';
 
     // Convert to base64 using Deno's standard library
     const buffer = await fileData.arrayBuffer();
@@ -150,30 +152,64 @@ serve(async (req) => {
     
     console.log('Step 8: File size:', uint8Array.length, 'bytes');
     
-    // Validate file type by checking magic bytes
-    if (isPdf) {
-      // PDFs should start with %PDF (bytes: 37, 80, 68, 70)
-      const isPdfValid = uint8Array[0] === 37 && uint8Array[1] === 80 && 
-                         uint8Array[2] === 68 && uint8Array[3] === 70;
-      
-      if (!isPdfValid) {
-        const firstBytes = Array.from(uint8Array.slice(0, 20));
-        const preview = String.fromCharCode(...firstBytes);
-        console.error('Invalid PDF file. First bytes:', firstBytes, 'Preview:', preview);
-        
-        await supabaseClient
-          .from('validation_materials')
-          .update({ 
-            ai_validation_status: 'error',
-            ai_validation_result: `Invalid PDF file. The file appears to be ${preview.startsWith('<!') ? 'an HTML document' : 'corrupted or not a valid PDF'}. Please upload a valid PDF file.`
-          })
-          .eq('id', materialId);
-        
-        return new Response(
-          JSON.stringify({ error: 'Invalid PDF file' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+    // Layer 3: Validate file type by checking magic bytes
+    const magicBytesCheck = (bytes: Uint8Array): { valid: boolean; actualType?: string } => {
+      // PDF: starts with %PDF (37, 80, 68, 70)
+      if (bytes[0] === 37 && bytes[1] === 80 && bytes[2] === 68 && bytes[3] === 70) {
+        return { valid: expectedMediaType === 'application/pdf', actualType: 'PDF' };
       }
+      
+      // PNG: starts with 0x89, 0x50, 0x4E, 0x47
+      if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+        return { valid: expectedMediaType === 'image/png', actualType: 'PNG' };
+      }
+      
+      // JPEG: starts with 0xFF, 0xD8, 0xFF
+      if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+        return { valid: expectedMediaType === 'image/jpeg', actualType: 'JPEG' };
+      }
+      
+      // WEBP: starts with RIFF at 0-3, WEBP at 8-11
+      if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+          bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+        return { valid: expectedMediaType === 'image/webp', actualType: 'WEBP' };
+      }
+      
+      // GIF: starts with GIF87a or GIF89a
+      if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
+        return { valid: expectedMediaType === 'image/gif', actualType: 'GIF' };
+      }
+      
+      // HTML detection
+      const preview = String.fromCharCode(...Array.from(bytes.slice(0, 20)));
+      if (preview.startsWith('<!')) {
+        return { valid: false, actualType: 'HTML document' };
+      }
+      
+      return { valid: false, actualType: 'unknown or corrupted file' };
+    };
+    
+    const magicBytesValidation = magicBytesCheck(uint8Array);
+    
+    if (!magicBytesValidation.valid) {
+      const errorMsg = magicBytesValidation.actualType 
+        ? `Invalid file: Expected ${fileExt.toUpperCase()} but file is actually a ${magicBytesValidation.actualType}. Please ensure you upload the correct file format. If you saved an HTML page, convert it to PDF first.`
+        : `Invalid or corrupted ${fileExt.toUpperCase()} file. Please upload a valid PDF or image file.`;
+      
+      console.error('Magic bytes validation failed:', magicBytesValidation);
+      
+      await supabaseClient
+        .from('validation_materials')
+        .update({ 
+          ai_validation_status: 'error',
+          ai_validation_result: errorMsg
+        })
+        .eq('id', materialId);
+      
+      return new Response(
+        JSON.stringify({ error: 'Invalid file format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
     const base64 = encodeBase64(uint8Array);
@@ -183,8 +219,10 @@ serve(async (req) => {
       throw new Error('ANTHROPIC_API_KEY not set');
     }
 
-    // Determine content type for Anthropic
+    // Determine content type for Anthropic API
     const contentType = isPdf ? 'document' : 'image';
+    
+    console.log('Step 9: File validated - Type:', contentType, 'MediaType:', expectedMediaType);
 
     // Call Anthropic
     const prompt = `You are validating if a student actually completed work they claimed.
@@ -227,7 +265,7 @@ Respond JSON:
               type: contentType,
               source: {
                 type: 'base64',
-                media_type: mediaType,
+                media_type: expectedMediaType,
                 data: base64
               }
             },

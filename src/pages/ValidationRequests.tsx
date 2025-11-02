@@ -171,9 +171,67 @@ export default function ValidationRequests() {
     }
   };
 
+  const validateFile = (file: File): { valid: boolean; error?: string } => {
+    // Layer 1: Check file extension
+    const allowedExtensions = ['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.gif'];
+    const fileExt = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+    
+    if (!allowedExtensions.includes(fileExt)) {
+      return {
+        valid: false,
+        error: `Invalid file type. Please upload PDF or image files (PNG, JPG, JPEG, WEBP, GIF). You uploaded: ${fileExt}`
+      };
+    }
+
+    // Layer 2: Check MIME type
+    const allowedMimeTypes = [
+      'application/pdf',
+      'image/png',
+      'image/jpeg',
+      'image/webp',
+      'image/gif'
+    ];
+    
+    if (!allowedMimeTypes.includes(file.type)) {
+      return {
+        valid: false,
+        error: `Invalid file format. The file appears to be ${file.type || 'unknown'}. Please upload a valid PDF or image file.`
+      };
+    }
+
+    // Layer 3: Check file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      return {
+        valid: false,
+        error: `File too large. Maximum size is 10MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`
+      };
+    }
+
+    return { valid: true };
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      const validation = validateFile(file);
+      
+      if (!validation.valid) {
+        toast({
+          title: "Invalid File",
+          description: validation.error,
+          variant: "destructive",
+        });
+        e.target.value = ''; // Reset input
+        setSelectedFile(null);
+        return;
+      }
+      
+      setSelectedFile(file);
+      toast({
+        title: "File Selected",
+        description: `${file.name} is ready to upload`,
+      });
     }
   };
 
@@ -384,12 +442,16 @@ export default function ValidationRequests() {
                     <div className="border-t pt-4 space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor={`file-${request.id}`}>Upload Proof of Work</Label>
-                        <Input
+                         <Input
                           id={`file-${request.id}`}
                           type="file"
+                          accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,application/pdf,image/png,image/jpeg,image/webp,image/gif"
                           onChange={handleFileSelect}
                           disabled={uploadingFor === request.id}
                         />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Accepted formats: PDF, PNG, JPG, JPEG, WEBP, GIF (max 10MB)
+                        </p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor={`notes-${request.id}`}>Notes (Optional)</Label>
