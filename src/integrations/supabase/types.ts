@@ -297,6 +297,9 @@ export type Database = {
       }
       validation_materials: {
         Row: {
+          ai_validated_at: string | null
+          ai_validation_result: string | null
+          ai_validation_status: string | null
           file_path: string
           id: string
           notes: string | null
@@ -304,6 +307,9 @@ export type Database = {
           validation_request_id: string
         }
         Insert: {
+          ai_validated_at?: string | null
+          ai_validation_result?: string | null
+          ai_validation_status?: string | null
           file_path: string
           id?: string
           notes?: string | null
@@ -311,6 +317,9 @@ export type Database = {
           validation_request_id: string
         }
         Update: {
+          ai_validated_at?: string | null
+          ai_validation_result?: string | null
+          ai_validation_status?: string | null
           file_path?: string
           id?: string
           notes?: string | null

@@ -24,7 +24,15 @@ interface ValidationRequest {
   task_title: string;
   course_name: string;
   ta_name: string;
-  materials: { id: string; file_path: string; notes: string; uploaded_at: string }[];
+  materials: {
+    id: string;
+    file_path: string;
+    notes: string;
+    uploaded_at: string;
+    ai_validation_status: string;
+    ai_validation_result: string | null;
+    ai_validated_at: string | null;
+  }[];
 }
 
 export default function ValidationRequests() {
@@ -164,13 +172,15 @@ export default function ValidationRequests() {
       if (uploadError) throw uploadError;
 
       // Create validation material record
-      const { error: insertError } = await supabase
+      const { data: materialData, error: insertError } = await supabase
         .from('validation_materials')
         .insert({
           validation_request_id: requestId,
           file_path: fileName,
           notes: notes || null,
-        });
+        })
+        .select()
+        .single();
 
       if (insertError) throw insertError;
 
@@ -184,8 +194,19 @@ export default function ValidationRequests() {
 
       toast({
         title: "Success",
-        description: "Validation material uploaded successfully",
+        description: "Material uploaded successfully. AI validation in progress...",
       });
+
+      // Trigger AI validation in background
+      supabase.functions
+        .invoke('validate-document', {
+          body: { materialId: materialData.id }
+        })
+        .then(({ error: functionError }) => {
+          if (functionError) {
+            console.error('AI validation error:', functionError);
+          }
+        });
 
       setSelectedFile(null);
       setNotes('');
@@ -287,16 +308,43 @@ export default function ValidationRequests() {
                       <p className="text-sm font-medium mb-2">Uploaded Materials:</p>
                       <div className="space-y-2">
                         {request.materials.map((material) => (
-                          <div key={material.id} className="flex items-center justify-between bg-muted p-2 rounded-md">
-                            <div className="flex-1">
+                          <div key={material.id} className="border rounded-md p-3 space-y-2">
+                            <div className="flex items-center justify-between">
                               <p className="text-sm font-medium">{material.file_path.split('/').pop()}</p>
-                              {material.notes && (
-                                <p className="text-xs text-muted-foreground">{material.notes}</p>
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(material.uploaded_at), 'MMM d, h:mm a')}
+                              </span>
+                            </div>
+                            {material.notes && (
+                              <p className="text-xs text-muted-foreground">{material.notes}</p>
+                            )}
+                            <div className="border-t pt-2 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium">AI Validation:</span>
+                                <Badge 
+                                  variant={
+                                    material.ai_validation_status === 'approved' ? 'default' :
+                                    material.ai_validation_status === 'rejected' ? 'destructive' :
+                                    material.ai_validation_status === 'validating' ? 'secondary' :
+                                    material.ai_validation_status === 'error' ? 'destructive' :
+                                    'outline'
+                                  }
+                                  className="text-xs"
+                                >
+                                  {material.ai_validation_status}
+                                </Badge>
+                              </div>
+                              {material.ai_validation_result && (
+                                <p className="text-xs text-muted-foreground">
+                                  {material.ai_validation_result}
+                                </p>
+                              )}
+                              {material.ai_validated_at && (
+                                <p className="text-xs text-muted-foreground">
+                                  Validated: {format(new Date(material.ai_validated_at), 'MMM d, h:mm a')}
+                                </p>
                               )}
                             </div>
-                            <span className="text-xs text-muted-foreground">
-                              {format(new Date(material.uploaded_at), 'MMM d, h:mm a')}
-                            </span>
                           </div>
                         ))}
                       </div>
