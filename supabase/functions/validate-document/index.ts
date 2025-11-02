@@ -98,26 +98,50 @@ serve(async (req) => {
       throw new Error('ANTHROPIC_API_KEY not configured');
     }
 
+    // Get submission details to know what tasks student claimed they completed
+    const { data: submissionData } = await supabaseClient
+      .from('task_submissions')
+      .select('answers')
+      .eq('id', material.validation_request?.task_submission_id)
+      .single();
+
+    const studentAnswers = submissionData?.answers || [];
+    const completedTasksCount = Array.isArray(studentAnswers) 
+      ? studentAnswers.filter((a: any) => a.options && a.options.length > 0).length 
+      : 0;
+
     // Prepare validation prompt
     const taskInfo = material.validation_request?.task_submission?.task;
-    const validationPrompt = `You are reviewing a student's submission for validation.
+    const validationPrompt = `You are validating if a student actually completed the work they claimed to have done.
+
+IMPORTANT: You are NOT checking if answers are correct. You are ONLY verifying that the student actually did the work they claimed.
 
 Task: ${taskInfo?.title || 'Unknown task'}
 Task Description: ${taskInfo?.description || 'No description'}
+
+Student claimed to have completed: ${completedTasksCount} tasks/questions
 
 TA's Request: ${material.validation_request?.request_message}
 
 Student's Notes: ${material.notes || 'No notes provided'}
 
-Please analyze the submitted document and determine if it adequately demonstrates the work claimed by the student. 
+Your job is to check:
+1. Does the uploaded document show evidence that the student actually did the work they claimed?
+2. Does the number of completed items shown in the document match what they submitted (${completedTasksCount} tasks)?
+3. Is there proof of effort and completion (code, screenshots, work artifacts)?
+
+You are NOT judging:
+- Whether the answers are correct
+- The quality of the work
+- Whether they got the right solution
 
 Respond with a JSON object in this exact format:
 {
   "approved": true/false,
-  "reasoning": "Your detailed explanation here"
+  "reasoning": "Your detailed explanation here about whether they actually did the work"
 }
 
-Be thorough but fair in your assessment.`;
+Approve if the document shows they genuinely completed the work. Reject if the evidence doesn't match their claims.`;
 
     // Call Anthropic API
     const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
