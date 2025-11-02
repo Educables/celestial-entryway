@@ -256,7 +256,7 @@ Respond JSON:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 1024,
         messages: [{
           role: 'user',
@@ -280,12 +280,12 @@ Respond JSON:
 
     if (!anthropicResp.ok) {
       const errText = await anthropicResp.text();
-      console.error('Anthropic error:', errText);
+      console.error('Anthropic API error:', anthropicResp.status, errText);
       await supabaseClient
         .from('validation_materials')
         .update({ 
           ai_validation_status: 'error',
-          ai_validation_result: 'AI validation failed'
+          ai_validation_result: `AI validation failed: ${errText.substring(0, 200)}`
         })
         .eq('id', materialId);
       
@@ -296,6 +296,7 @@ Respond JSON:
     }
 
     const aiResult = await anthropicResp.json();
+    console.log('Full AI result:', JSON.stringify(aiResult));
     const aiMessage = aiResult.content?.[0]?.text || '';
     
     console.log('AI Response:', aiMessage);
