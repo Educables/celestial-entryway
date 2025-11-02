@@ -225,41 +225,46 @@ serve(async (req) => {
     console.log('Step 9: File validated - Type:', contentType, 'MediaType:', expectedMediaType);
 
     // Call Anthropic
-    const prompt = `You are validating if a document contains evidence of task/question 1 with multiple choice options.
+    const prompt = `You are validating if a document matches what a student claimed they completed.
 
-IMPORTANT: You are ONLY checking if the document shows task/question 1 with options (a, b, etc.).
+CRITICAL: Check if the document contains evidence of what the student CLAIMED they did.
 
-Task: ${task?.title || 'Unknown'}
-Description: ${task?.description || 'None'}
-Student completed: ${completedCount} tasks
-TA Request: ${request?.request_message}
-Student Notes: ${material.notes || 'None'}
+Student's Claim:
+- They claim to have completed ${completedCount} task(s)/question(s)
+- Submission answers: ${JSON.stringify(answers)}
 
-Check ONLY (case-insensitive):
-1. Does the document contain any identifier for task/question/item 1 (e.g., "Task 1", "Question 1", "1a", "1.", etc.)?
-2. Does it show multiple choice options like:
-   - "a." or "a)" followed by content
-   - "b." or "b)" followed by content
-   - Can be on separate lines or same line
-   - Can be "A.", "A)", "a.", "a)" - case doesn't matter
-3. This can be handwritten or typed text
-4. It could appear anywhere in the document
+Task Context:
+- Task: ${task?.title || 'Unknown'}
+- Description: ${task?.description || 'None'}
+- TA Request: ${request?.request_message}
+- Student Notes: ${material.notes || 'None'}
 
-You are NOT checking:
-- Specific wording like "question 1 option a"
-- Whether it's answered correctly
-- If there's any work shown
-- Quality of answers
-- Code, screenshots, or artifacts
+Validation Rules (case-insensitive, flexible naming):
+1. The student claimed ${completedCount} items - verify those items exist in the document
+2. Look for task/question/problem numbering (e.g., "Task 1", "Question 1", "1a", "Q1", "Problem 1", etc.)
+3. If they claimed an option (a, b, c), verify that option exists (could be "a.", "a)", "A.", "A)", etc.)
+4. The text can be handwritten or typed
+5. Format is flexible - just verify the claimed items are present
+
+What to CHECK:
+- Does the document show the number/identifier of items claimed?
+- If options were claimed, are those options visible?
+
+What NOT to check:
+- Whether answers are correct
+- Quality of work
+- If work is complete or detailed
+- Code, screenshots, or other artifacts
+- Items NOT claimed by the student
 
 Respond JSON:
 {
   "approved": true/false,
-  "reasoning": "explanation"
+  "reasoning": "specific explanation of what was found or missing"
 }
 
-Approve if you can identify task/question 1 with options (a, b, etc.) anywhere in the document (handwritten or typed).
-Reject if you cannot find this pattern.`;
+APPROVE if: All claimed items are visible in the document
+REJECT if: Any claimed item is missing from the document`;
 
     const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
