@@ -129,9 +129,29 @@ serve(async (req) => {
       'pdf': 'application/pdf',
       'png': 'image/png',
       'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg'
+      'jpeg': 'image/jpeg',
+      'webp': 'image/webp',
+      'gif': 'image/gif'
     };
-    const mediaType = mediaTypes[fileExt || ''] || 'application/pdf';
+    
+    const mediaType = mediaTypes[fileExt || ''];
+    
+    // Check if file type is supported
+    if (!mediaType) {
+      console.error('Unsupported file type:', fileExt);
+      await supabaseClient
+        .from('validation_materials')
+        .update({ 
+          ai_validation_status: 'error',
+          ai_validation_result: `Unsupported file type: ${fileExt}. Please upload PDF or image files (PNG, JPG, JPEG, WEBP, GIF).`
+        })
+        .eq('id', materialId);
+      
+      return new Response(
+        JSON.stringify({ error: 'Unsupported file type' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
     if (!ANTHROPIC_API_KEY) {
