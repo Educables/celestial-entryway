@@ -11,6 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EnrolledStudents } from '@/components/instructor/EnrolledStudents';
 import { CourseTasksView } from '@/components/ta/CourseTasksView';
+import ValidationRequestsView from '@/components/ta/ValidationRequestsView';
 
 interface Course {
   id: string;
@@ -170,15 +171,19 @@ export default function TADashboard() {
                         <CollapsibleContent>
                           <CardContent>
                             <Tabs defaultValue="students" className="w-full">
-                              <TabsList className="grid w-full grid-cols-2">
+                              <TabsList className="grid w-full grid-cols-3">
                                 <TabsTrigger value="students">Students</TabsTrigger>
                                 <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                                <TabsTrigger value="validations">Validations</TabsTrigger>
                               </TabsList>
                               <TabsContent value="students" className="mt-4">
                                 <EnrolledStudents courseId={course.id} courseName={course.name} />
                               </TabsContent>
                               <TabsContent value="tasks" className="mt-4">
                                 <CourseTasksView courseId={course.id} />
+                              </TabsContent>
+                              <TabsContent value="validations" className="mt-4">
+                                <ValidationRequestsView />
                               </TabsContent>
                             </Tabs>
                           </CardContent>
@@ -215,6 +220,10 @@ export default function TADashboard() {
                 <li className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-primary" />
                   Monitor course progress
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-primary" />
+                  Request and review validation materials with AI assistance
                 </li>
               </ul>
             </CardContent>
