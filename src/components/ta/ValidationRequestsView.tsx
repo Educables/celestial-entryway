@@ -36,6 +36,30 @@ export default function ValidationRequestsView() {
     fetchValidationRequests();
   }, []);
 
+  // Subscribe to real-time updates for validation materials
+  useEffect(() => {
+    const channel = supabase
+      .channel('ta-validation-materials-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'validation_materials',
+        },
+        (payload) => {
+          console.log('Validation material updated:', payload);
+          // Refresh the requests to show updated validation status
+          fetchValidationRequests();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const fetchValidationRequests = async () => {
     try {
       setLoading(true);
