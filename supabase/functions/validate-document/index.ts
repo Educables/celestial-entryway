@@ -7,12 +7,14 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { materialId } = await req.json();
+    console.log('Validating material:', materialId);
 
     if (!materialId) {
       return new Response(
@@ -26,125 +28,132 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get the validation material details
-    const { data: material, error: materialError } = await supabaseClient
+    // Get material
+    const { data: material, error: matErr } = await supabaseClient
       .from('validation_materials')
-      .select(`
-        *,
-        validation_request:validation_requests(
-          request_message,
-          task_submission:task_submissions(
-            task:tasks(title, description)
-          )
-        )
-      `)
+      .select('*')
       .eq('id', materialId)
       .single();
 
-    if (materialError || !material) {
-      console.error('Error fetching material:', materialError);
+    if (matErr || !material) {
+      console.error('Material not found:', matErr);
       return new Response(
         JSON.stringify({ error: 'Material not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Update status to validating
+    // Update to validating
     await supabaseClient
       .from('validation_materials')
       .update({ ai_validation_status: 'validating' })
       .eq('id', materialId);
 
-    // Download the file from storage
-    const { data: fileData, error: downloadError } = await supabaseClient
+    console.log('Step 1: Status updated');
+
+    // Get validation request
+    const { data: request } = await supabaseClient
+      .from('validation_requests')
+      .select('request_message, task_submission_id')
+      .eq('id', material.validation_request_id)
+      .single();
+
+    console.log('Step 2: Got request');
+
+    // Get task submission
+    const { data: submission } = await supabaseClient
+      .from('task_submissions')
+      .select('answers, task_id')
+      .eq('id', request?.task_submission_id)
+      .single();
+
+    console.log('Step 3: Got submission');
+
+    // Get task
+    const { data: task } = await supabaseClient
+      .from('tasks')
+      .select('title, description')
+      .eq('id', submission?.task_id)
+      .single();
+
+    console.log('Step 4: Got task');
+
+    // Calculate completed tasks
+    const answers = submission?.answers || [];
+    const completedCount = Array.isArray(answers) 
+      ? answers.filter((a: any) => a.options?.length > 0).length 
+      : 0;
+
+    console.log('Step 5: Calculated count:', completedCount);
+
+    // Download file
+    console.log('Step 6: Starting file download');
+    const { data: fileData, error: dlErr } = await supabaseClient
       .storage
       .from('validation-materials')
       .download(material.file_path);
 
-    if (downloadError || !fileData) {
-      console.error('Error downloading file:', downloadError);
+    console.log('Step 7: File downloaded');
+
+    if (dlErr || !fileData) {
+      console.error('Download error:', dlErr);
       await supabaseClient
         .from('validation_materials')
         .update({ 
           ai_validation_status: 'error',
-          ai_validation_result: 'Failed to download file for validation'
+          ai_validation_result: 'Failed to download file'
         })
         .eq('id', materialId);
       
       return new Response(
-        JSON.stringify({ error: 'Failed to download file' }),
+        JSON.stringify({ error: 'File download failed' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Convert file to base64
-    const arrayBuffer = await fileData.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    // Convert to base64
+    const buffer = await fileData.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
     
-    // Determine media type
     const fileExt = material.file_path.split('.').pop()?.toLowerCase();
-    const mediaTypeMap: Record<string, string> = {
+    const mediaTypes: Record<string, string> = {
       'pdf': 'application/pdf',
       'png': 'image/png',
       'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'webp': 'image/webp',
-      'gif': 'image/gif'
+      'jpeg': 'image/jpeg'
     };
-    const mediaType = mediaTypeMap[fileExt || ''] || 'application/pdf';
+    const mediaType = mediaTypes[fileExt || ''] || 'application/pdf';
 
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
     if (!ANTHROPIC_API_KEY) {
-      throw new Error('ANTHROPIC_API_KEY not configured');
+      throw new Error('ANTHROPIC_API_KEY not set');
     }
 
-    // Get submission details to know what tasks student claimed they completed
-    const { data: submissionData } = await supabaseClient
-      .from('task_submissions')
-      .select('answers')
-      .eq('id', material.validation_request?.task_submission_id)
-      .single();
+    // Call Anthropic
+    const prompt = `You are validating if a student actually completed work they claimed.
 
-    const studentAnswers = submissionData?.answers || [];
-    const completedTasksCount = Array.isArray(studentAnswers) 
-      ? studentAnswers.filter((a: any) => a.options && a.options.length > 0).length 
-      : 0;
+IMPORTANT: You are NOT checking correctness, only if they actually did the work.
 
-    // Prepare validation prompt
-    const taskInfo = material.validation_request?.task_submission?.task;
-    const validationPrompt = `You are validating if a student actually completed the work they claimed to have done.
+Task: ${task?.title || 'Unknown'}
+Description: ${task?.description || 'None'}
+Student completed: ${completedCount} tasks
+TA Request: ${request?.request_message}
+Student Notes: ${material.notes || 'None'}
 
-IMPORTANT: You are NOT checking if answers are correct. You are ONLY verifying that the student actually did the work they claimed.
+Check if:
+1. Document shows evidence of claimed work
+2. Number of items matches submission (${completedCount})
+3. Has proof (code, screenshots, artifacts)
 
-Task: ${taskInfo?.title || 'Unknown task'}
-Task Description: ${taskInfo?.description || 'No description'}
+NOT checking: correctness, quality, right answers
 
-Student claimed to have completed: ${completedTasksCount} tasks/questions
-
-TA's Request: ${material.validation_request?.request_message}
-
-Student's Notes: ${material.notes || 'No notes provided'}
-
-Your job is to check:
-1. Does the uploaded document show evidence that the student actually did the work they claimed?
-2. Does the number of completed items shown in the document match what they submitted (${completedTasksCount} tasks)?
-3. Is there proof of effort and completion (code, screenshots, work artifacts)?
-
-You are NOT judging:
-- Whether the answers are correct
-- The quality of the work
-- Whether they got the right solution
-
-Respond with a JSON object in this exact format:
+Respond JSON:
 {
   "approved": true/false,
-  "reasoning": "Your detailed explanation here about whether they actually did the work"
-}
+  "reasoning": "explanation"
+}`;
 
-Approve if the document shows they genuinely completed the work. Reject if the evidence doesn't match their claims.`;
-
-    // Call Anthropic API
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
+    const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -154,37 +163,34 @@ Approve if the document shows they genuinely completed the work. Reject if the e
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
         max_tokens: 1024,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'document',
-                source: {
-                  type: 'base64',
-                  media_type: mediaType,
-                  data: base64
-                }
-              },
-              {
-                type: 'text',
-                text: validationPrompt
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: mediaType,
+                data: base64
               }
-            ]
-          }
-        ]
+            },
+            {
+              type: 'text',
+              text: prompt
+            }
+          ]
+        }]
       })
     });
 
-    if (!anthropicResponse.ok) {
-      const errorText = await anthropicResponse.text();
-      console.error('Anthropic API error:', errorText);
-      
+    if (!anthropicResp.ok) {
+      const errText = await anthropicResp.text();
+      console.error('Anthropic error:', errText);
       await supabaseClient
         .from('validation_materials')
         .update({ 
           ai_validation_status: 'error',
-          ai_validation_result: 'AI validation service error'
+          ai_validation_result: 'AI validation failed'
         })
         .eq('id', materialId);
       
@@ -194,48 +200,38 @@ Approve if the document shows they genuinely completed the work. Reject if the e
       );
     }
 
-    const aiResult = await anthropicResponse.json();
+    const aiResult = await anthropicResp.json();
     const aiMessage = aiResult.content?.[0]?.text || '';
     
-    // Parse the AI response
-    let validationResult;
+    let validation;
     try {
-      validationResult = JSON.parse(aiMessage);
+      validation = JSON.parse(aiMessage);
     } catch {
-      // If JSON parsing fails, treat as error
-      validationResult = {
-        approved: false,
-        reasoning: aiMessage || 'Unable to parse validation result'
-      };
+      validation = { approved: false, reasoning: aiMessage || 'Could not parse result' };
     }
 
-    const status = validationResult.approved ? 'approved' : 'rejected';
+    const status = validation.approved ? 'approved' : 'rejected';
 
-    // Update the validation material with AI results
     await supabaseClient
       .from('validation_materials')
       .update({
         ai_validation_status: status,
-        ai_validation_result: validationResult.reasoning,
+        ai_validation_result: validation.reasoning,
         ai_validated_at: new Date().toISOString()
       })
       .eq('id', materialId);
 
-    console.log(`Document validated successfully: ${status}`);
+    console.log('Validation complete:', status);
 
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        status,
-        result: validationResult.reasoning
-      }),
+      JSON.stringify({ success: true, status, result: validation.reasoning }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {
-    console.error('Error in validate-document function:', error);
+    console.error('Function error:', error?.message);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error?.message || 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

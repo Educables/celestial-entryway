@@ -197,16 +197,19 @@ export default function ValidationRequests() {
         description: "Material uploaded successfully. AI validation in progress...",
       });
 
-      // Trigger AI validation in background
-      supabase.functions
-        .invoke('validate-document', {
-          body: { materialId: materialData.id }
-        })
-        .then(({ error: functionError }) => {
-          if (functionError) {
-            console.error('AI validation error:', functionError);
-          }
+      // Trigger AI validation
+      const { error: functionError } = await supabase.functions.invoke('validate-document', {
+        body: { materialId: materialData.id }
+      });
+
+      if (functionError) {
+        console.error('AI validation error:', functionError);
+        toast({
+          title: "Warning",
+          description: "Material uploaded but AI validation failed to start. Please contact support.",
+          variant: "destructive",
         });
+      }
 
       setSelectedFile(null);
       setNotes('');
