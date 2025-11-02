@@ -225,9 +225,9 @@ serve(async (req) => {
     console.log('Step 9: File validated - Type:', contentType, 'MediaType:', expectedMediaType);
 
     // Call Anthropic
-    const prompt = `You are validating if a document shows the tasks/questions the student claimed they completed.
+    const prompt = `You are validating if a document shows the task/question identifiers the student claimed to complete.
 
-CRITICAL RULE: Just verify the task/question identifiers are VISIBLE in the document. That's it.
+CRITICAL: Only check if the IDENTIFIER is visible. DO NOT check for answers, work, or solutions.
 
 Student's Claim:
 - Completed ${completedCount} task(s)/question(s)
@@ -238,24 +238,26 @@ Context:
 - TA Request: ${request?.request_message}
 - Student Notes: ${material.notes || 'None'}
 
-SIMPLE VALIDATION (case-insensitive):
-1. Look for task/question identifiers the student claimed (e.g., "1a", "Task 1a", "Question 1 option a", "Q1a", "Problem 1a")
-2. "Task 1a" = "Question 1a" = "1a" = "Q1 option a" = all the same thing
-3. Just seeing the identifier (like "Task 1a") is ENOUGH - you don't need to see "option a" separately
-4. Can be handwritten or typed
-5. Any format/naming is fine as long as the number and letter match what they claimed
+WHAT TO CHECK (case-insensitive):
+✓ Is the task/question identifier visible? (e.g., "Task 1a", "Question 1a", "1a", "Q1 option a")
+✓ "Task 1a" = "Question 1a" = "1a" = "Q1 option a" = all equivalent
+✓ Can be handwritten or typed anywhere in the document
 
-EXAMPLES that SHOULD PASS:
-- Claimed "question 1 option a" → Document shows "Task 1a" ✓ PASS
-- Claimed "question 1 a" → Document shows "1a" ✓ PASS  
-- Claimed "task 1 option a" → Document shows "Question 1a" ✓ PASS
+WHAT NOT TO CHECK:
+✗ Actual answers or solutions
+✗ Work shown or explanations
+✗ Correctness of any content
+✗ Quality or completeness
+✗ Code, screenshots, or artifacts
 
-ONLY REJECT if:
-- Claimed "question 1 option a" but document only shows "Task 2a" ✗ REJECT (wrong number)
-- Claimed "question 1 option a" but document only shows "Task 1b" ✗ REJECT (wrong option)
-- Claimed "questions 1 and 2" but document only shows "Question 1" ✗ REJECT (missing question 2)
+EXAMPLES:
+- Document shows "Task 1a" with NO answer → ✓ APPROVE (identifier is there)
+- Document shows "1a" only → ✓ APPROVE (identifier is there)
+- Document shows "Task 1a: [answer text]" → ✓ APPROVE (identifier is there)
+- Claimed "1a" but document shows "Task 2a" → ✗ REJECT (wrong number)
+- Claimed "1a" but document shows "Task 1b" → ✗ REJECT (wrong option)
 
-Respond JSON:
+Respond ONLY with valid JSON (no markdown):
 {
   "approved": true/false,
   "reasoning": "what identifiers were found or missing"
