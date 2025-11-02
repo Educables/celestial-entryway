@@ -227,7 +227,7 @@ serve(async (req) => {
     // Call Anthropic
     const prompt = `You are validating if a document shows the task/question identifiers the student claimed to complete.
 
-CRITICAL: Only check if the IDENTIFIER is visible. DO NOT check for answers, work, or solutions.
+YOUR ONLY JOB: Check if the identifier label (like "1a", "1b", "2a") appears ANYWHERE in the document.
 
 Student's Claim:
 - Completed ${completedCount} task(s)/question(s)
@@ -238,24 +238,38 @@ Context:
 - TA Request: ${request?.request_message}
 - Student Notes: ${material.notes || 'None'}
 
-WHAT TO CHECK (case-insensitive):
-✓ Is the task/question identifier visible? (e.g., "Task 1a", "Question 1a", "1a", "Q1 option a")
-✓ "Task 1a" = "Question 1a" = "1a" = "Q1 option a" = all equivalent
-✓ Can be handwritten or typed anywhere in the document
+VALIDATION RULE (case-insensitive):
+Look for the identifier label ONLY. These are all equivalent and valid:
+- "Task 1a" ✓
+- "Question 1a" ✓
+- "1a" ✓
+- "Q1 option a" ✓
+- "Problem 1a" ✓
 
-WHAT NOT TO CHECK:
-✗ Actual answers or solutions
-✗ Work shown or explanations
-✗ Correctness of any content
-✗ Quality or completeness
-✗ Code, screenshots, or artifacts
+Location/format does NOT matter:
+- As a heading ✓
+- As a title ✓
+- In a list ✓
+- Handwritten ✓
+- Typed ✓
+- With or without answer ✓
 
-EXAMPLES:
-- Document shows "Task 1a" with NO answer → ✓ APPROVE (identifier is there)
-- Document shows "1a" only → ✓ APPROVE (identifier is there)
-- Document shows "Task 1a: [answer text]" → ✓ APPROVE (identifier is there)
-- Claimed "1a" but document shows "Task 2a" → ✗ REJECT (wrong number)
-- Claimed "1a" but document shows "Task 1b" → ✗ REJECT (wrong option)
+IGNORE COMPLETELY:
+✗ Whether answers are present
+✗ Whether questions are shown
+✗ Whether work is shown
+✗ Whether anything is correct
+✗ Whether content exists after the identifier
+
+APPROVE if identifier matches what student claimed:
+- Student claimed "question 1 option A" → Document shows "Task 1a" → ✓ APPROVE
+- Student claimed "1a" → Document shows just "1a" as heading → ✓ APPROVE
+- Student claimed "task 1 a" → Document shows "Question 1a" → ✓ APPROVE
+
+REJECT only if identifier is wrong or missing:
+- Student claimed "1a" → Document shows "Task 2a" → ✗ REJECT (wrong number)
+- Student claimed "1a" → Document shows "Task 1b" → ✗ REJECT (wrong letter)
+- Student claimed "1a" → Document shows nothing → ✗ REJECT (missing)
 
 Respond ONLY with valid JSON (no markdown):
 {
