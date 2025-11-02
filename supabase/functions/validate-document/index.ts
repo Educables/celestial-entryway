@@ -317,7 +317,15 @@ Respond JSON:
     
     let validation;
     try {
-      validation = JSON.parse(aiMessage);
+      // Strip markdown code blocks if present
+      let cleanedMessage = aiMessage.trim();
+      if (cleanedMessage.startsWith('```json')) {
+        cleanedMessage = cleanedMessage.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanedMessage.startsWith('```')) {
+        cleanedMessage = cleanedMessage.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      validation = JSON.parse(cleanedMessage);
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
       console.error('AI message was:', aiMessage);
