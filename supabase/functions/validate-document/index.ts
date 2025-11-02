@@ -225,46 +225,42 @@ serve(async (req) => {
     console.log('Step 9: File validated - Type:', contentType, 'MediaType:', expectedMediaType);
 
     // Call Anthropic
-    const prompt = `You are validating if a document matches what a student claimed they completed.
+    const prompt = `You are validating if a document shows the tasks/questions the student claimed they completed.
 
-CRITICAL: Check if the document contains evidence of what the student CLAIMED they did.
+CRITICAL RULE: Just verify the task/question identifiers are VISIBLE in the document. That's it.
 
 Student's Claim:
-- They claim to have completed ${completedCount} task(s)/question(s)
-- Submission answers: ${JSON.stringify(answers)}
+- Completed ${completedCount} task(s)/question(s)
+- Submission details: ${JSON.stringify(answers)}
 
-Task Context:
+Context:
 - Task: ${task?.title || 'Unknown'}
-- Description: ${task?.description || 'None'}
 - TA Request: ${request?.request_message}
 - Student Notes: ${material.notes || 'None'}
 
-Validation Rules (case-insensitive, flexible naming):
-1. The student claimed ${completedCount} items - verify those items exist in the document
-2. Look for task/question/problem numbering (e.g., "Task 1", "Question 1", "1a", "Q1", "Problem 1", etc.)
-3. If they claimed an option (a, b, c), verify that option exists (could be "a.", "a)", "A.", "A)", etc.)
-4. The text can be handwritten or typed
-5. Format is flexible - just verify the claimed items are present
+SIMPLE VALIDATION (case-insensitive):
+1. Look for task/question identifiers the student claimed (e.g., "1a", "Task 1a", "Question 1 option a", "Q1a", "Problem 1a")
+2. "Task 1a" = "Question 1a" = "1a" = "Q1 option a" = all the same thing
+3. Just seeing the identifier (like "Task 1a") is ENOUGH - you don't need to see "option a" separately
+4. Can be handwritten or typed
+5. Any format/naming is fine as long as the number and letter match what they claimed
 
-What to CHECK:
-- Does the document show the number/identifier of items claimed?
-- If options were claimed, are those options visible?
+EXAMPLES that SHOULD PASS:
+- Claimed "question 1 option a" → Document shows "Task 1a" ✓ PASS
+- Claimed "question 1 a" → Document shows "1a" ✓ PASS  
+- Claimed "task 1 option a" → Document shows "Question 1a" ✓ PASS
 
-What NOT to check:
-- Whether answers are correct
-- Quality of work
-- If work is complete or detailed
-- Code, screenshots, or other artifacts
-- Items NOT claimed by the student
+ONLY REJECT if:
+- Claimed "question 1 option a" but document only shows "Task 2a" ✗ REJECT (wrong number)
+- Claimed "question 1 option a" but document only shows "Task 1b" ✗ REJECT (wrong option)
+- Claimed "questions 1 and 2" but document only shows "Question 1" ✗ REJECT (missing question 2)
 
 Respond JSON:
 {
   "approved": true/false,
-  "reasoning": "specific explanation of what was found or missing"
-}
+  "reasoning": "what identifiers were found or missing"
+}`;
 
-APPROVE if: All claimed items are visible in the document
-REJECT if: Any claimed item is missing from the document`;
 
     const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
