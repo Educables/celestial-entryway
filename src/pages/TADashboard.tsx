@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, User, LogOut, GraduationCap, ChevronDown, Users } from 'lucide-react';
+import { ArrowLeft, User, LogOut, GraduationCap, ChevronDown, Users, ScanLine } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -103,6 +103,10 @@ export default function TADashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate('/scanner')}>
+              <ScanLine className="h-4 w-4 mr-2" />
+              Attendance Scanner
+            </Button>
             <Button variant="outline" size="sm" onClick={() => navigate('/ta-groups')}>
               <Users className="h-4 w-4 mr-2" />
               Student Groups

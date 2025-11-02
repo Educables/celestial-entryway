@@ -166,7 +166,7 @@ export default function AttendanceScanner() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10 p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
-          <Button onClick={() => navigate('/instructor')} variant="outline">
+          <Button onClick={() => navigate(-1)} variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
