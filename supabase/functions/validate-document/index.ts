@@ -317,15 +317,26 @@ Respond JSON:
     
     let validation;
     try {
-      // Strip markdown code blocks if present
+      // Strip markdown code blocks if present (```json or ```)
       let cleanedMessage = aiMessage.trim();
-      if (cleanedMessage.startsWith('```json')) {
-        cleanedMessage = cleanedMessage.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-      } else if (cleanedMessage.startsWith('```')) {
-        cleanedMessage = cleanedMessage.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      
+      // Remove ```json ... ``` wrapper
+      if (cleanedMessage.includes('```')) {
+        // Extract content between first ``` and last ```
+        const firstBacktick = cleanedMessage.indexOf('```');
+        const lastBacktick = cleanedMessage.lastIndexOf('```');
+        
+        if (firstBacktick !== -1 && lastBacktick !== -1 && firstBacktick !== lastBacktick) {
+          cleanedMessage = cleanedMessage.substring(firstBacktick + 3, lastBacktick);
+          // Remove 'json' if it's at the start
+          cleanedMessage = cleanedMessage.replace(/^json\s*/, '');
+        }
       }
       
+      cleanedMessage = cleanedMessage.trim();
       validation = JSON.parse(cleanedMessage);
+      
+      console.log('Parsed validation:', validation);
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
       console.error('AI message was:', aiMessage);
