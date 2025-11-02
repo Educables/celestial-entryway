@@ -298,10 +298,14 @@ Respond JSON:
     const aiResult = await anthropicResp.json();
     const aiMessage = aiResult.content?.[0]?.text || '';
     
+    console.log('AI Response:', aiMessage);
+    
     let validation;
     try {
       validation = JSON.parse(aiMessage);
-    } catch {
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('AI message was:', aiMessage);
       validation = { approved: false, reasoning: aiMessage || 'Could not parse result' };
     }
 
