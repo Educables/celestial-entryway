@@ -135,22 +135,38 @@ export default function TAStudentGroups() {
       // Get all submissions for this task
       const { data: submissions, error: submissionsError } = await supabase
         .from('task_submissions')
-        .select(`
-          id,
-          student_id,
-          answers,
-          profiles!task_submissions_student_id_fkey(name, email)
-        `)
+        .select('id, student_id, answers')
         .eq('task_id', taskId);
 
       if (submissionsError) throw submissionsError;
 
-      const studentsWithSubmissions = (submissions || []).map((sub: any) => ({
-        id: sub.student_id,
-        name: sub.profiles?.name || 'Unknown',
-        email: sub.profiles?.email || '',
-        submissionId: sub.id,
-      }));
+      if (!submissions || submissions.length === 0) {
+        setStudentGroups([]);
+        setSelectedTask(taskId);
+        return;
+      }
+
+      // Get student profiles
+      const studentIds = [...new Set(submissions.map(s => s.student_id))];
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', studentIds);
+
+      if (profilesError) throw profilesError;
+
+      // Create a map of student profiles
+      const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+      const studentsWithSubmissions = submissions.map((sub) => {
+        const profile = profilesMap.get(sub.student_id);
+        return {
+          id: sub.student_id,
+          name: profile?.name || 'Unknown',
+          email: profile?.email || '',
+          submissionId: sub.id,
+        };
+      });
 
       // Group students evenly across questions
       const groups: StudentGroup[] = [];
