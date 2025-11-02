@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
-import { FileCheck, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
+import { FileCheck, CheckCircle, XCircle, Clock, Loader2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ValidationMaterial {
@@ -29,6 +31,7 @@ interface ValidationRequestDetails {
 }
 
 export default function ValidationRequestsView() {
+  const navigate = useNavigate();
   const [requests, setRequests] = useState<ValidationRequestDetails[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -197,10 +200,19 @@ export default function ValidationRequestsView() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-4">
-        <FileCheck className="h-6 w-6 text-primary" />
-        <h2 className="text-2xl font-bold">Validation Requests</h2>
-        <Badge variant="secondary">{requests.length} Total</Badge>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <FileCheck className="h-6 w-6 text-primary" />
+          <h2 className="text-2xl font-bold">Validation Requests</h2>
+          <Badge variant="secondary">{requests.length} Total</Badge>
+        </div>
+        <Button 
+          variant="outline"
+          onClick={() => navigate('/ta-groups')}
+        >
+          <Users className="h-4 w-4 mr-2" />
+          View Student Groups
+        </Button>
       </div>
 
       {requests.map((request) => (
