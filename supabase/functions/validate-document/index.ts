@@ -225,9 +225,9 @@ serve(async (req) => {
     console.log('Step 9: File validated - Type:', contentType, 'MediaType:', expectedMediaType);
 
     // Call Anthropic
-    const prompt = `You are validating if a student actually completed work they claimed.
+    const prompt = `You are validating if a document contains "question 1 option a".
 
-IMPORTANT: You are NOT checking correctness, only if they actually did the work.
+IMPORTANT: You are ONLY checking if the document shows "question 1 option a" anywhere in it.
 
 Task: ${task?.title || 'Unknown'}
 Description: ${task?.description || 'None'}
@@ -235,18 +235,25 @@ Student completed: ${completedCount} tasks
 TA Request: ${request?.request_message}
 Student Notes: ${material.notes || 'None'}
 
-Check if:
-1. Document shows evidence of claimed work
-2. Number of items matches submission (${completedCount})
-3. Has proof (code, screenshots, artifacts)
+Check ONLY:
+1. Does the document contain text that says "question 1 option a" (or similar variations like "Q1 option A", "Question 1, Option A", etc.)?
+2. This can be handwritten or typed text
+3. It could appear anywhere in the document
 
-NOT checking: correctness, quality, right answers
+You are NOT checking:
+- Whether it's answered correctly
+- If there's any work shown
+- Quality of answers
+- Code, screenshots, or artifacts
 
 Respond JSON:
 {
   "approved": true/false,
   "reasoning": "explanation"
-}`;
+}
+
+Approve if you can identify "question 1 option a" text anywhere in the document (handwritten or typed).
+Reject if you cannot find this text.`;
 
     const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
