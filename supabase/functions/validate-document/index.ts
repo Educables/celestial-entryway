@@ -158,6 +158,10 @@ serve(async (req) => {
       throw new Error('ANTHROPIC_API_KEY not set');
     }
 
+    // Determine if it's a PDF or image
+    const isPdf = mediaType === 'application/pdf';
+    const contentType = isPdf ? 'document' : 'image';
+
     // Call Anthropic
     const prompt = `You are validating if a student actually completed work they claimed.
 
@@ -196,7 +200,7 @@ Respond JSON:
           role: 'user',
           content: [
             {
-              type: 'document',
+              type: contentType,
               source: {
                 type: 'base64',
                 media_type: mediaType,
