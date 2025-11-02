@@ -17,6 +17,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import CreateTask from "./pages/CreateTask";
 import ValidationRequests from "./pages/ValidationRequests";
+import TAStudentGroups from "./pages/TAStudentGroups";
 
 const queryClient = new QueryClient();
 
@@ -99,6 +100,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['student']}>
                   <ValidationRequests />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/ta-groups" 
+              element={
+                <ProtectedRoute allowedRoles={['ta']}>
+                  <TAStudentGroups />
                 </ProtectedRoute>
               } 
             />
