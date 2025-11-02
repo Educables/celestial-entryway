@@ -225,9 +225,9 @@ serve(async (req) => {
     console.log('Step 9: File validated - Type:', contentType, 'MediaType:', expectedMediaType);
 
     // Call Anthropic
-    const prompt = `You are validating if a document contains "question 1 option a".
+    const prompt = `You are validating if a document contains evidence of task/question 1 with multiple choice options.
 
-IMPORTANT: You are ONLY checking if the document shows "question 1 option a" anywhere in it.
+IMPORTANT: You are ONLY checking if the document shows task/question 1 with options (a, b, etc.).
 
 Task: ${task?.title || 'Unknown'}
 Description: ${task?.description || 'None'}
@@ -235,12 +235,18 @@ Student completed: ${completedCount} tasks
 TA Request: ${request?.request_message}
 Student Notes: ${material.notes || 'None'}
 
-Check ONLY:
-1. Does the document contain text that says "question 1 option a" (or similar variations like "Q1 option A", "Question 1, Option A", etc.)?
-2. This can be handwritten or typed text
-3. It could appear anywhere in the document
+Check ONLY (case-insensitive):
+1. Does the document contain any identifier for task/question/item 1 (e.g., "Task 1", "Question 1", "1a", "1.", etc.)?
+2. Does it show multiple choice options like:
+   - "a." or "a)" followed by content
+   - "b." or "b)" followed by content
+   - Can be on separate lines or same line
+   - Can be "A.", "A)", "a.", "a)" - case doesn't matter
+3. This can be handwritten or typed text
+4. It could appear anywhere in the document
 
 You are NOT checking:
+- Specific wording like "question 1 option a"
 - Whether it's answered correctly
 - If there's any work shown
 - Quality of answers
@@ -252,8 +258,8 @@ Respond JSON:
   "reasoning": "explanation"
 }
 
-Approve if you can identify "question 1 option a" text anywhere in the document (handwritten or typed).
-Reject if you cannot find this text.`;
+Approve if you can identify task/question 1 with options (a, b, etc.) anywhere in the document (handwritten or typed).
+Reject if you cannot find this pattern.`;
 
     const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
