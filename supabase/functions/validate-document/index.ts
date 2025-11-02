@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -111,19 +112,7 @@ serve(async (req) => {
       );
     }
 
-    // Convert to base64 (chunked to avoid stack overflow on large files)
-    const buffer = await fileData.arrayBuffer();
-    const uint8Array = new Uint8Array(buffer);
-    const chunkSize = 8192; // Process 8KB at a time
-    let binaryString = '';
-    
-    for (let i = 0; i < uint8Array.length; i += chunkSize) {
-      const chunk = uint8Array.subarray(i, i + chunkSize);
-      binaryString += String.fromCharCode.apply(null, Array.from(chunk));
-    }
-    
-    const base64 = btoa(binaryString);
-    
+    // Determine media type early for validation
     const fileExt = material.file_path.split('.').pop()?.toLowerCase();
     const mediaTypes: Record<string, string> = {
       'pdf': 'application/pdf',
@@ -153,13 +142,48 @@ serve(async (req) => {
       );
     }
 
+    const isPdf = mediaType === 'application/pdf';
+
+    // Convert to base64 using Deno's standard library
+    const buffer = await fileData.arrayBuffer();
+    const uint8Array = new Uint8Array(buffer);
+    
+    console.log('Step 8: File size:', uint8Array.length, 'bytes');
+    
+    // Validate file type by checking magic bytes
+    if (isPdf) {
+      // PDFs should start with %PDF (bytes: 37, 80, 68, 70)
+      const isPdfValid = uint8Array[0] === 37 && uint8Array[1] === 80 && 
+                         uint8Array[2] === 68 && uint8Array[3] === 70;
+      
+      if (!isPdfValid) {
+        const firstBytes = Array.from(uint8Array.slice(0, 20));
+        const preview = String.fromCharCode(...firstBytes);
+        console.error('Invalid PDF file. First bytes:', firstBytes, 'Preview:', preview);
+        
+        await supabaseClient
+          .from('validation_materials')
+          .update({ 
+            ai_validation_status: 'error',
+            ai_validation_result: `Invalid PDF file. The file appears to be ${preview.startsWith('<!') ? 'an HTML document' : 'corrupted or not a valid PDF'}. Please upload a valid PDF file.`
+          })
+          .eq('id', materialId);
+        
+        return new Response(
+          JSON.stringify({ error: 'Invalid PDF file' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    
+    const base64 = encodeBase64(uint8Array);
+    
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
     if (!ANTHROPIC_API_KEY) {
       throw new Error('ANTHROPIC_API_KEY not set');
     }
 
-    // Determine if it's a PDF or image
-    const isPdf = mediaType === 'application/pdf';
+    // Determine content type for Anthropic
     const contentType = isPdf ? 'document' : 'image';
 
     // Call Anthropic
